@@ -1,78 +1,128 @@
 
+# Simple Password Login System
 
-## Baby Journal App - Phase 1: Foundation & Google Drive Prototype
+## Overview
 
-### 🎯 Goal
-Build a working prototype that proves the Google Drive integration works, with a solid database structure that supports all future features. **Single-user app** - no authentication needed.
-
----
-
-### 📊 Database Structure (Supabase)
-
-**Simplified tables (no user auth):**
-
-| Table | Purpose |
-|-------|---------|
-| `babies` | One record per baby, stores name + Drive folder ID |
-| `entries` | All memories - links to Drive files + metadata |
-| `tags` | Reusable tags (e.g., "first smile", "milestone") |
-| `entry_tags` | Many-to-many relationship for flexible tagging |
-| `google_tokens` | Store OAuth refresh token (single row) |
-
-**Entry fields:** type (photo/video/audio/text), description, date, drive_file_id, thumbnail_url, duration (for audio/video)
+A minimal login system where you manually add users in the backend. Users enter a password to log in - no email, no signup, just password.
 
 ---
 
-### 🔗 Google Drive Integration
+## How It Works
 
-**One-time setup you'll do:**
-1. Create a Google Cloud project
-2. Enable Drive API
-3. Set up OAuth consent screen (just for yourself)
-4. Create OAuth credentials
-5. Add client ID/secret to Supabase secrets
-
-**App behavior:**
-- Connect once with your Google account
-- Store refresh token in database
-- Auto-create "BabyJournal/{BabyName}" folders
-- Upload media directly to Drive
-- Store file references in Supabase
+1. **You add users** in the backend table with: password, nickname, and permission level
+2. **Users see a login screen** with just a password field
+3. **On login**, the system finds the matching password and logs them in
+4. **Permissions control access**:
+   - `full` = can add babies, upload entries, connect Drive
+   - `view_only` = can only browse content
 
 ---
 
-### 🖥️ Prototype UI (Functional, not fancy)
+## Database Changes
 
-1. **Google Drive Connect** - One-click OAuth, shows connection status
-2. **Add Baby** - Name input → creates folder in Drive
-3. **Upload Entry** - Select file + add description/tags → uploads to Drive + saves metadata
-4. **Simple List View** - Shows all entries with thumbnails/previews
-5. **Basic Search** - Filter by text, tags, or date range
+### New Table: `app_users`
 
----
+| Column | Type | Description |
+|--------|------|-------------|
+| id | uuid | Auto-generated ID |
+| password | text | Login password (you set this) |
+| nickname | text | Display name shown in app |
+| permission | text | Either "full" or "view_only" |
+| created_at | timestamp | When user was added |
 
-### 🧱 Modular Edge Functions
-
-| Function | Purpose |
-|----------|---------|
-| `drive-auth` | OAuth flow + token refresh |
-| `drive-upload` | Upload files to correct baby folder |
-| `drive-folder` | Create/manage folders |
-| `entries-crud` | Create, read, update, delete entries |
-| `search` | Query entries (future: add AI semantic search) |
-
-Each function is independent and can be upgraded without affecting others.
+You'll add users directly in the backend by inserting rows into this table.
 
 ---
 
-### 🚀 For Your Friend Later
+## New Backend Function
 
-When duplicating for a friend:
-1. Fork the repository
-2. Create new Supabase project
-3. Run database migrations
-4. Set up their own Google Cloud credentials
-5. They connect their own Google Drive
+### `login` Edge Function
 
-Each instance is completely independent!
+- Receives a password from the frontend
+- Looks up matching user in `app_users` table
+- Returns user info (nickname, permission) if found
+- Returns error if password not found
 
+---
+
+## Frontend Changes
+
+### Login Screen
+
+When not logged in, users see:
+- App title and logo
+- Single password input field
+- "Enter" button
+- Clean, simple design
+
+### After Login
+
+- User's nickname shown in header
+- Logout button available
+- Components hidden based on permission:
+  - `view_only` users don't see Add Baby, Upload Entry, or Connect Drive forms
+  - `view_only` users see a "View only" badge
+
+### Session Storage
+
+- Login state stored in browser's localStorage
+- Persists across page refreshes
+- Cleared on logout
+
+---
+
+## File Changes
+
+### New Files
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/login/index.ts` | Verifies password and returns user |
+| `src/pages/Login.tsx` | Password input screen |
+| `src/hooks/useAuth.ts` | Manages login state and user info |
+| `src/components/UserHeader.tsx` | Shows nickname and logout button |
+
+### Modified Files
+
+| File | Change |
+|------|--------|
+| `src/App.tsx` | Add Login route, check auth state |
+| `src/pages/Index.tsx` | Hide edit components for view_only users |
+| `src/components/AddBabyForm.tsx` | Hide if view_only |
+| `src/components/UploadEntryForm.tsx` | Hide if view_only |
+| `src/components/GoogleDriveConnect.tsx` | Hide if view_only |
+
+---
+
+## Implementation Steps
+
+1. **Create `app_users` table** in database with password, nickname, permission columns
+2. **Create `login` edge function** to verify passwords
+3. **Build Login page** with password field
+4. **Create useAuth hook** to manage session state
+5. **Add UserHeader component** showing nickname + logout
+6. **Update App.tsx** to route based on login state
+7. **Update Index.tsx** to check permissions and hide components
+
+---
+
+## Setting Up Users
+
+After implementation, you'll add users by inserting rows in the backend:
+
+```text
+Example users you might add:
+- password: "parent123", nickname: "Mom", permission: "full"
+- password: "parent456", nickname: "Dad", permission: "full"  
+- password: "grandma", nickname: "Grandma", permission: "view_only"
+```
+
+---
+
+## Technical Notes
+
+- Passwords are stored as plain text in the database (simple approach since you control access)
+- The edge function uses the service role key to query the table
+- RLS policy allows only the edge function (via service role) to read the passwords
+- Frontend stores only nickname and permission in localStorage (never the password)
+- No signup flow - all user management is done by you in the backend
