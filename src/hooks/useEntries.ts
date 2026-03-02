@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useDeleteFromDrive } from "@/hooks/useGoogleDrive";
@@ -8,35 +8,56 @@ export type Entry = Tables<"entries">;
 export type EntryInsert = TablesInsert<"entries">;
 
 export type EntryWithTags = Entry & {
+  created_by_nickname?: string | null;
   entry_tags: Array<{
     tag_id: string;
     tags: Tables<"tags">;
   }>;
 };
 
+const PAGE_SIZE = 20;
+
 export function useEntries(babyId?: string) {
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: ["entries", babyId],
-    queryFn: async () => {
+    queryFn: async ({ pageParam = 0 }) => {
+      const from = pageParam * PAGE_SIZE;
+      const to = from + PAGE_SIZE - 1;
+
       let query = supabase
         .from("entries")
         .select(`
           *,
+          app_users:created_by ( nickname ),
           entry_tags (
             tag_id,
             tags (*)
           )
         `)
-        .order("date", { ascending: false });
-      
+        .order("date", { ascending: false })
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
       if (babyId) {
         query = query.eq("baby_id", babyId);
       }
-      
+
       const { data, error } = await query;
-      
       if (error) throw error;
-      return data as EntryWithTags[];
+
+      // Flatten the joined nickname
+      const entries = (data as any[]).map((row) => ({
+        ...row,
+        created_by_nickname: row.app_users?.nickname ?? null,
+        app_users: undefined,
+      })) as EntryWithTags[];
+
+      return entries;
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage, allPages) => {
+      if (lastPage.length < PAGE_SIZE) return undefined;
+      return allPages.length;
     },
   });
 }
@@ -104,7 +125,6 @@ export function useUpdateEntry() {
       if (entryError) throw entryError;
 
       if (tagIds !== undefined) {
-        // Remove existing tags then re-insert
         const { error: deleteError } = await supabase
           .from("entry_tags")
           .delete()
@@ -137,14 +157,12 @@ export function useDeleteEntry() {
   
   return useMutation({
     mutationFn: async (entryId: string) => {
-      // First fetch the entry to get drive_file_id
       const { data: entry } = await supabase
         .from("entries")
         .select("drive_file_id")
         .eq("id", entryId)
         .single();
 
-      // Delete from Drive if there's a file (best-effort, don't block DB delete)
       if (entry?.drive_file_id) {
         try {
           await deleteFromDrive.mutateAsync(entry.drive_file_id);
@@ -153,7 +171,6 @@ export function useDeleteEntry() {
         }
       }
 
-      // Delete thumbnail from storage (best-effort)
       try {
         await deleteThumbnail(entryId);
       } catch (e) {

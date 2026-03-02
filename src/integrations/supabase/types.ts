@@ -69,6 +69,7 @@ export type Database = {
         Row: {
           baby_id: string
           created_at: string
+          created_by: string | null
           date: string
           description: string | null
           drive_file_id: string | null
@@ -84,6 +85,7 @@ export type Database = {
         Insert: {
           baby_id: string
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           drive_file_id?: string | null
@@ -99,6 +101,7 @@ export type Database = {
         Update: {
           baby_id?: string
           created_at?: string
+          created_by?: string | null
           date?: string
           description?: string | null
           drive_file_id?: string | null
@@ -117,6 +120,13 @@ export type Database = {
             columns: ["baby_id"]
             isOneToOne: false
             referencedRelation: "babies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
             referencedColumns: ["id"]
           },
         ]
