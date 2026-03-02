@@ -74,10 +74,14 @@ export function AddMemoryDialog({
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
     } else {
+      // Reset everything for create mode
+      resetForm();
       if (preSelectedBabyId) {
         setSelectedBabyId(preSelectedBabyId);
       } else if (babies?.length === 1) {
         setSelectedBabyId(babies[0].id);
+      } else {
+        setSelectedBabyId("");
       }
     }
   }, [open, editEntry, preSelectedBabyId, babies]);
