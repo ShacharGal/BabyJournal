@@ -28,7 +28,7 @@ export function useEntries(babyId?: string) {
         .from("entries")
         .select(`
           *,
-          app_users:created_by ( nickname ),
+          app_users_public:created_by ( nickname ),
           entry_tags (
             tag_id,
             tags (*)
@@ -48,8 +48,8 @@ export function useEntries(babyId?: string) {
       // Flatten the joined nickname
       const entries = (data as any[]).map((row) => ({
         ...row,
-        created_by_nickname: row.app_users?.nickname ?? null,
-        app_users: undefined,
+        created_by_nickname: row.app_users_public?.nickname ?? null,
+        app_users_public: undefined,
       })) as EntryWithTags[];
 
       return entries;
