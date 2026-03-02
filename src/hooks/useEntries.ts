@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useDeleteFromDrive } from "@/hooks/useGoogleDrive";
+import { deleteThumbnail } from "@/lib/thumbnails";
 
 export type Entry = Tables<"entries">;
 export type EntryInsert = TablesInsert<"entries">;
@@ -150,6 +151,13 @@ export function useDeleteEntry() {
         } catch (e) {
           console.warn("Failed to delete Drive file:", e);
         }
+      }
+
+      // Delete thumbnail from storage (best-effort)
+      try {
+        await deleteThumbnail(entryId);
+      } catch (e) {
+        console.warn("Failed to delete thumbnail:", e);
       }
 
       const { error } = await supabase
