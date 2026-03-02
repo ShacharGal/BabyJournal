@@ -23,6 +23,7 @@ import { useTags } from "@/hooks/useTags";
 import { useGoogleConnection, useUploadToDrive } from "@/hooks/useGoogleDrive";
 import { toast } from "@/hooks/use-toast";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save } from "lucide-react";
+import { generateAndUploadThumbnail } from "@/lib/thumbnails";
 
 const typeIcons = {
   photo: Image,
@@ -146,7 +147,6 @@ export function AddMemoryDialog({
       } else {
         // Create new entry
         let driveFileId: string | undefined;
-        let thumbnailUrl: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
         if (file && isConnected && selectedBaby?.drive_folder_id) {
@@ -155,26 +155,35 @@ export function AddMemoryDialog({
             folderId: selectedBaby.drive_folder_id,
           });
           driveFileId = result.fileId;
-          thumbnailUrl = result.thumbnailUrl;
           entryType = getFileType(file.type);
         } else if (file) {
           entryType = getFileType(file.type);
         }
 
-        await createEntry.mutateAsync({
+        const newEntry = await createEntry.mutateAsync({
           entry: {
             baby_id: selectedBabyId,
             type: entryType,
             description: description.trim() || null,
             date,
             drive_file_id: driveFileId,
-            thumbnail_url: thumbnailUrl,
             file_name: file?.name,
             file_size: file?.size,
             mime_type: file?.type,
           },
           tagIds: selectedTags,
         });
+
+        // Generate and upload thumbnail for images
+        if (file && file.type.startsWith("image/") && newEntry?.id) {
+          const thumbUrl = await generateAndUploadThumbnail(file, newEntry.id);
+          if (thumbUrl) {
+            await updateEntry.mutateAsync({
+              entryId: newEntry.id,
+              entry: { thumbnail_url: thumbUrl },
+            });
+          }
+        }
 
         toast({
           title: "Memory saved!",
