@@ -22,9 +22,9 @@ export function useGoogleConnection() {
 
 export function useInitiateGoogleAuth() {
   return useMutation({
-    mutationFn: async () => {
+    mutationFn: async (redirectUri: string) => {
       const response = await supabase.functions.invoke("drive-auth", {
-        body: { action: "get-auth-url" },
+        body: { action: "get-auth-url", redirectUri },
       });
       
       if (response.error) throw response.error;
@@ -37,9 +37,9 @@ export function useExchangeGoogleCode() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (code: string) => {
+    mutationFn: async ({ code, redirectUri }: { code: string; redirectUri: string }) => {
       const response = await supabase.functions.invoke("drive-auth", {
-        body: { action: "exchange-code", code },
+        body: { action: "exchange-code", code, redirectUri },
       });
       
       if (response.error) throw response.error;
