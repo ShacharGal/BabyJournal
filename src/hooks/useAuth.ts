@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type Permission = "full" | "view_only";
+export type Permission = "full" | "add" | "view_only";
 
 export interface User {
   id: string;
@@ -62,12 +62,14 @@ export function useAuth() {
     setUser(null);
   }, []);
 
+  const canAdd = user?.permission === "full" || user?.permission === "add";
   const canEdit = user?.permission === "full";
 
   return {
     user,
     isLoading,
     isAuthenticated: !!user,
+    canAdd,
     canEdit,
     login,
     logout,

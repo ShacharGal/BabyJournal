@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEntries, useDeleteEntry, type EntryWithTags } from "@/hooks/useEntries";
@@ -6,18 +6,10 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2,
-  Image,
-  Video,
-  Mic,
-  FileText,
-  Trash2,
-  Users,
-  Heart,
-  Pencil,
-  X,
+  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
+import type { Filters } from "@/components/SearchFilters";
 
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
   const dob = new Date(dateOfBirth);
@@ -46,17 +38,13 @@ const typeIcons = {
 
 interface MemoryFeedProps {
   babyId?: string;
-  search: string;
+  filters: Filters;
   onEditEntry?: (entry: EntryWithTags) => void;
 }
 
-export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
+export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const {
-    data,
-    isLoading,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
+    data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage,
   } = useEntries(babyId);
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
@@ -65,7 +53,6 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
-  // Infinite scroll observer
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
@@ -84,12 +71,23 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
   const allEntries = data?.pages.flat() ?? [];
 
   const filteredEntries = allEntries.filter((entry) => {
-    if (!search) return true;
-    const s = search.toLowerCase();
-    return (
-      entry.description?.toLowerCase().includes(s) ||
-      entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s))
-    );
+    // Text filter
+    if (filters.text) {
+      const s = filters.text.toLowerCase();
+      const matchesText =
+        entry.description?.toLowerCase().includes(s) ||
+        entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s));
+      if (!matchesText) return false;
+    }
+    // Tag filter
+    if (filters.tagIds.length > 0) {
+      const entryTagIds = entry.entry_tags.map((et) => et.tag_id);
+      if (!filters.tagIds.some((id) => entryTagIds.includes(id))) return false;
+    }
+    // Date range
+    if (filters.dateFrom && entry.date < filters.dateFrom) return false;
+    if (filters.dateTo && entry.date > filters.dateTo) return false;
+    return true;
   });
 
   const handleDelete = (entryId: string) => {
@@ -117,10 +115,14 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
       <div className="text-center py-20 text-muted-foreground">
         <Heart className="h-12 w-12 mx-auto mb-4 opacity-20" />
         <p className="text-lg font-medium">
-          {search ? "No memories match your search" : "No memories yet"}
+          {filters.text || filters.tagIds.length > 0 || filters.dateFrom || filters.dateTo
+            ? "No memories match your filters"
+            : "No memories yet"}
         </p>
         <p className="text-sm mt-1">
-          {search ? "Try a different search term" : "Tap + to add your first memory"}
+          {filters.text || filters.tagIds.length > 0
+            ? "Try different filters"
+            : "Tap + to add your first memory"}
         </p>
       </div>
     );
@@ -150,7 +152,6 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
         )}
       </div>
 
-      {/* Lightbox */}
       {lightboxUrl && (
         <div
           className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
@@ -190,12 +191,10 @@ interface MemoryCardProps {
 function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit, onImageTap }: MemoryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
-
   const descriptionLong = (entry.description?.length ?? 0) > 200;
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {/* Square thumbnail — tap to view full */}
       {entry.thumbnail_url && (
         <div
           className="w-full aspect-square overflow-hidden cursor-pointer"
@@ -210,7 +209,6 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
       )}
 
       <div className="p-4 space-y-3">
-        {/* Header row */}
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-2 flex-wrap">
             <TypeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -231,12 +229,7 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
           </div>
           <div className="flex items-center gap-1 shrink-0">
             {canEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onEdit?.(entry)}
-              >
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit?.(entry)}>
                 <Pencil className="h-4 w-4" />
               </Button>
             )}
@@ -253,7 +246,6 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
           </div>
         </div>
 
-        {/* Description with see more */}
         {entry.description && (
           <div>
             <p className={`text-sm whitespace-pre-wrap ${!expanded && descriptionLong ? "line-clamp-4" : ""}`}>
@@ -270,14 +262,12 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
           </div>
         )}
 
-        {/* Added by */}
         {entry.created_by_nickname && (
           <p className="text-xs text-muted-foreground">
             Added by {entry.created_by_nickname}
           </p>
         )}
 
-        {/* Tags */}
         {entry.entry_tags.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {entry.entry_tags.map((et) => (

@@ -5,6 +5,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  canAdd: boolean;
   canEdit: boolean;
   login: (password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
