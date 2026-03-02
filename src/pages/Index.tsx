@@ -6,13 +6,14 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { EntryWithTags } from "@/hooks/useEntries";
+import type { Filters } from "@/components/SearchFilters";
 
 const Index = () => {
   const [selectedBabyId, setSelectedBabyId] = useState<string | undefined>(undefined);
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "" });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
-  const { canEdit } = useAuthContext();
+  const { canAdd } = useAuthContext();
 
   const handleEdit = (entry: EntryWithTags) => {
     setEditEntry(entry);
@@ -29,16 +30,15 @@ const Index = () => {
       <AppNavBar
         selectedBabyId={selectedBabyId}
         onSelectBaby={setSelectedBabyId}
-        search={search}
-        onSearchChange={setSearch}
+        filters={filters}
+        onFiltersChange={setFilters}
       />
 
       <main className="mx-auto max-w-[600px] px-4 py-6 pb-24">
-        <MemoryFeed babyId={selectedBabyId} search={search} onEditEntry={handleEdit} />
+        <MemoryFeed babyId={selectedBabyId} filters={filters} onEditEntry={handleEdit} />
       </main>
 
-      {/* Floating Add Button */}
-      {canEdit && (
+      {canAdd && (
         <Button
           onClick={() => setAddDialogOpen(true)}
           size="icon"

@@ -19,8 +19,8 @@ import {
 } from "@/components/ui/select";
 import { useBabies } from "@/hooks/useBabies";
 import { useCreateEntry, useUpdateEntry, type EntryWithTags } from "@/hooks/useEntries";
-import { useTags } from "@/hooks/useTags";
 import { useGoogleConnection, useUploadToDrive } from "@/hooks/useGoogleDrive";
+import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save } from "lucide-react";
@@ -55,7 +55,7 @@ export function AddMemoryDialog({
   const [isUploading, setIsUploading] = useState(false);
 
   const { data: babies } = useBabies();
-  const { data: tags } = useTags();
+  // tags are handled by TagCombobox
   const { data: googleConnection } = useGoogleConnection();
   const createEntry = useCreateEntry();
   const updateEntry = useUpdateEntry();
@@ -309,27 +309,10 @@ export function AddMemoryDialog({
           </div>
 
           {/* Tags */}
-          {tags && tags.length > 0 && (
-            <div>
-              <label className="text-sm font-medium mb-2 block">Tags</label>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <Badge
-                    key={tag.id}
-                    variant={selectedTags.includes(tag.id) ? "default" : "outline"}
-                    className="cursor-pointer transition-colors"
-                    style={{
-                      backgroundColor: selectedTags.includes(tag.id) ? tag.color || undefined : undefined,
-                      borderColor: tag.color || undefined,
-                    }}
-                    onClick={() => toggleTag(tag.id)}
-                  >
-                    {tag.name}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-          )}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Tags</label>
+            <TagCombobox selectedTagIds={selectedTags} onToggleTag={toggleTag} />
+          </div>
 
           {/* Submit */}
           <Button type="submit" className="w-full" disabled={isUploading || !babies?.length}>
