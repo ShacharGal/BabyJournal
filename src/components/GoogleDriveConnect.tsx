@@ -22,7 +22,7 @@ export function GoogleDriveConnect() {
     
     if (code && !isConnected) {
       setIsConnecting(true);
-      exchangeCode.mutate(code, {
+      exchangeCode.mutate({ code, redirectUri: window.location.origin }, {
         onSuccess: () => {
           toast({
             title: "Google Drive Connected!",
@@ -47,7 +47,7 @@ export function GoogleDriveConnect() {
 
   const handleConnect = async () => {
     try {
-      const { url } = await initiateAuth.mutateAsync();
+      const { url } = await initiateAuth.mutateAsync(window.location.origin);
       window.location.href = url;
     } catch (error: unknown) {
       toast({

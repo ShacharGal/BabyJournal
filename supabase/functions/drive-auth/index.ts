@@ -11,7 +11,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { action, code } = await req.json();
+    const { action, code, redirectUri } = await req.json();
     
     const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
     const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
@@ -27,11 +27,16 @@ Deno.serve(async (req) => {
       );
     }
 
+    if (!redirectUri) {
+      return new Response(
+        JSON.stringify({ error: "redirectUri is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    // Get redirect URI from request origin or use default
-    const origin = req.headers.get("origin") || "http://localhost:5173";
-    const REDIRECT_URI = origin;
+    const REDIRECT_URI = redirectUri;
 
     if (action === "get-auth-url") {
       const scopes = [
