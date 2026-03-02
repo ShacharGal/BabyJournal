@@ -15,6 +15,7 @@ import {
   Calendar,
   Users,
   Heart,
+  Pencil,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 
@@ -46,9 +47,10 @@ const typeIcons = {
 interface MemoryFeedProps {
   babyId?: string;
   search: string;
+  onEditEntry?: (entry: EntryWithTags) => void;
 }
 
-export function MemoryFeed({ babyId, search }: MemoryFeedProps) {
+export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
   const { data: entries, isLoading } = useEntries(babyId);
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
@@ -107,6 +109,7 @@ export function MemoryFeed({ babyId, search }: MemoryFeedProps) {
           babyName={getBabyName(entry.baby_id)}
           babyDob={getBabyDob(entry.baby_id)}
           onDelete={handleDelete}
+          onEdit={onEditEntry}
           showBaby={!babyId}
           canEdit={canEdit}
         />
@@ -120,11 +123,12 @@ interface MemoryCardProps {
   babyName: string;
   babyDob: string | null;
   onDelete: (id: string) => void;
+  onEdit?: (entry: EntryWithTags) => void;
   showBaby: boolean;
   canEdit: boolean;
 }
 
-function MemoryCard({ entry, babyName, babyDob, onDelete, showBaby, canEdit }: MemoryCardProps) {
+function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit }: MemoryCardProps) {
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
 
   return (
@@ -172,6 +176,16 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, showBaby, canEdit }: M
                 }
               >
                 <ExternalLink className="h-4 w-4" />
+              </Button>
+            )}
+            {canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => onEdit?.(entry)}
+              >
+                <Pencil className="h-4 w-4" />
               </Button>
             )}
             {canEdit && (

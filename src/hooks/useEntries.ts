@@ -79,6 +79,56 @@ export function useCreateEntry() {
   });
 }
 
+export function useUpdateEntry() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      entryId,
+      entry,
+      tagIds,
+    }: {
+      entryId: string;
+      entry: Partial<EntryInsert>;
+      tagIds?: string[];
+    }) => {
+      const { data: updated, error: entryError } = await supabase
+        .from("entries")
+        .update(entry)
+        .eq("id", entryId)
+        .select()
+        .single();
+
+      if (entryError) throw entryError;
+
+      if (tagIds !== undefined) {
+        // Remove existing tags then re-insert
+        const { error: deleteError } = await supabase
+          .from("entry_tags")
+          .delete()
+          .eq("entry_id", entryId);
+        if (deleteError) throw deleteError;
+
+        if (tagIds.length > 0) {
+          const entryTags = tagIds.map((tagId) => ({
+            entry_id: entryId,
+            tag_id: tagId,
+          }));
+          const { error: tagError } = await supabase
+            .from("entry_tags")
+            .insert(entryTags);
+          if (tagError) throw tagError;
+        }
+      }
+
+      return updated;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["entries"] });
+    },
+  });
+}
+
 export function useDeleteEntry() {
   const queryClient = useQueryClient();
   

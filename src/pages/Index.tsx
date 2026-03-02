@@ -5,12 +5,24 @@ import { AddMemoryDialog } from "@/components/AddMemoryDialog";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { EntryWithTags } from "@/hooks/useEntries";
 
 const Index = () => {
   const [selectedBabyId, setSelectedBabyId] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
+  const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
   const { canEdit } = useAuthContext();
+
+  const handleEdit = (entry: EntryWithTags) => {
+    setEditEntry(entry);
+    setAddDialogOpen(true);
+  };
+
+  const handleDialogClose = (open: boolean) => {
+    setAddDialogOpen(open);
+    if (!open) setEditEntry(null);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -22,7 +34,7 @@ const Index = () => {
       />
 
       <main className="mx-auto max-w-[600px] px-4 py-6 pb-24">
-        <MemoryFeed babyId={selectedBabyId} search={search} />
+        <MemoryFeed babyId={selectedBabyId} search={search} onEditEntry={handleEdit} />
       </main>
 
       {/* Floating Add Button */}
@@ -38,8 +50,9 @@ const Index = () => {
 
       <AddMemoryDialog
         open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
+        onOpenChange={handleDialogClose}
         preSelectedBabyId={selectedBabyId}
+        editEntry={editEntry}
       />
     </div>
   );
