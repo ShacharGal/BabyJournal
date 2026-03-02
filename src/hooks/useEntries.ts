@@ -28,7 +28,6 @@ export function useEntries(babyId?: string) {
         .from("entries")
         .select(`
           *,
-          app_users_public:created_by ( nickname ),
           entry_tags (
             tag_id,
             tags (*)
@@ -45,11 +44,29 @@ export function useEntries(babyId?: string) {
       const { data, error } = await query;
       if (error) throw error;
 
-      // Flatten the joined nickname
-      const entries = (data as any[]).map((row) => ({
+      const rows = data as any[];
+      const creatorIds = Array.from(
+        new Set(rows.map((row) => row.created_by).filter(Boolean))
+      ) as string[];
+
+      const nicknameByUserId = new Map<string, string>();
+      if (creatorIds.length > 0) {
+        const { data: creators, error: creatorsError } = await supabase
+          .from("app_users_public" as any)
+          .select("id, nickname")
+          .in("id", creatorIds);
+
+        if (creatorsError) throw creatorsError;
+        (creators ?? []).forEach((creator: any) => {
+          nicknameByUserId.set(creator.id, creator.nickname);
+        });
+      }
+
+      const entries = rows.map((row) => ({
         ...row,
-        created_by_nickname: row.app_users_public?.nickname ?? null,
-        app_users_public: undefined,
+        created_by_nickname: row.created_by
+          ? nicknameByUserId.get(row.created_by) ?? null
+          : null,
       })) as EntryWithTags[];
 
       return entries;
