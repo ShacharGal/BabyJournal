@@ -17,8 +17,27 @@ import {
   Trash2,
   ExternalLink,
   Calendar,
-  Baby
+  Users
 } from "lucide-react";
+import { differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
+
+function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
+  const dob = new Date(dateOfBirth);
+  const d = new Date(memoryDate);
+  const months = differenceInMonths(d, dob);
+  if (months < 1) {
+    const days = differenceInDays(d, dob);
+    return `${days} day${days !== 1 ? "s" : ""} old`;
+  }
+  if (months < 24) {
+    return `${months} month${months !== 1 ? "s" : ""} old`;
+  }
+  const years = differenceInYears(d, dob);
+  const rem = months - years * 12;
+  return rem > 0
+    ? `${years}y ${rem}m old`
+    : `${years} year${years !== 1 ? "s" : ""} old`;
+}
 
 const typeIcons = {
   photo: Image,
@@ -80,6 +99,10 @@ export function EntryList({ babyId }: EntryListProps) {
     return babies?.find(b => b.id === babyId)?.name || "Unknown";
   };
 
+  const getBabyDob = (babyId: string) => {
+    return babies?.find(b => b.id === babyId)?.date_of_birth || null;
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -135,6 +158,7 @@ export function EntryList({ babyId }: EntryListProps) {
                 key={entry.id} 
                 entry={entry} 
                 babyName={getBabyName(entry.baby_id)}
+                babyDob={getBabyDob(entry.baby_id)}
                 onDelete={handleDelete}
                 showBaby={!babyId}
               />
@@ -149,11 +173,12 @@ export function EntryList({ babyId }: EntryListProps) {
 interface EntryCardProps {
   entry: EntryWithTags;
   babyName: string;
+  babyDob: string | null;
   onDelete: (id: string) => void;
   showBaby: boolean;
 }
 
-function EntryCard({ entry, babyName, onDelete, showBaby }: EntryCardProps) {
+function EntryCard({ entry, babyName, babyDob, onDelete, showBaby }: EntryCardProps) {
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
   const typeClass = typeColors[entry.type as keyof typeof typeColors] || typeColors.text;
 
@@ -169,9 +194,14 @@ function EntryCard({ entry, babyName, onDelete, showBaby }: EntryCardProps) {
               <span className="text-sm font-medium">
                 {format(new Date(entry.date), "MMM d, yyyy")}
               </span>
+              {babyDob && (
+                <Badge variant="secondary" className="text-xs">
+                  {formatAgeAtDate(babyDob, entry.date)}
+                </Badge>
+              )}
               {showBaby && (
                 <Badge variant="outline" className="text-xs">
-                  <Baby className="h-3 w-3 mr-1" />
+                  <Users className="h-3 w-3 mr-1" />
                   {babyName}
                 </Badge>
               )}

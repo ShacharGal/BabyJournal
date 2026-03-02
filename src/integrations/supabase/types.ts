@@ -41,6 +41,7 @@ export type Database = {
       babies: {
         Row: {
           created_at: string
+          date_of_birth: string | null
           drive_folder_id: string | null
           id: string
           name: string
@@ -48,6 +49,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          date_of_birth?: string | null
           drive_folder_id?: string | null
           id?: string
           name: string
@@ -55,6 +57,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          date_of_birth?: string | null
           drive_folder_id?: string | null
           id?: string
           name?: string

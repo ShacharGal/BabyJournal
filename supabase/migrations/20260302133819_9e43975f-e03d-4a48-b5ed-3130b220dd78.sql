@@ -1,0 +1,1 @@
+ALTER TABLE public.babies ADD COLUMN date_of_birth date;
