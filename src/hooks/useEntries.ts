@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
+import { useDeleteFromDrive } from "@/hooks/useGoogleDrive";
 
 export type Entry = Tables<"entries">;
 export type EntryInsert = TablesInsert<"entries">;
@@ -131,9 +132,26 @@ export function useUpdateEntry() {
 
 export function useDeleteEntry() {
   const queryClient = useQueryClient();
+  const deleteFromDrive = useDeleteFromDrive();
   
   return useMutation({
     mutationFn: async (entryId: string) => {
+      // First fetch the entry to get drive_file_id
+      const { data: entry } = await supabase
+        .from("entries")
+        .select("drive_file_id")
+        .eq("id", entryId)
+        .single();
+
+      // Delete from Drive if there's a file (best-effort, don't block DB delete)
+      if (entry?.drive_file_id) {
+        try {
+          await deleteFromDrive.mutateAsync(entry.drive_file_id);
+        } catch (e) {
+          console.warn("Failed to delete Drive file:", e);
+        }
+      }
+
       const { error } = await supabase
         .from("entries")
         .delete()

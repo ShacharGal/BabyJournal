@@ -122,3 +122,16 @@ export function useUploadToDrive() {
     },
   });
 }
+
+export function useDeleteFromDrive() {
+  return useMutation({
+    mutationFn: async (fileId: string) => {
+      const response = await supabase.functions.invoke("drive-delete", {
+        body: { fileId },
+      });
+
+      if (response.error) throw response.error;
+      return response.data;
+    },
+  });
+}
