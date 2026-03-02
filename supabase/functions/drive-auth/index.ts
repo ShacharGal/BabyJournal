@@ -27,16 +27,16 @@ Deno.serve(async (req) => {
       );
     }
 
-    if (!redirectUri) {
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+    if ((action === "get-auth-url" || action === "exchange-code") && !redirectUri) {
       return new Response(
         JSON.stringify({ error: "redirectUri is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     
-    const REDIRECT_URI = redirectUri;
+    const REDIRECT_URI = redirectUri ?? "";
 
     if (action === "get-auth-url") {
       const scopes = [
