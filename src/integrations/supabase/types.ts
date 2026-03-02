@@ -129,6 +129,13 @@ export type Database = {
             referencedRelation: "app_users"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       entry_tags: {
@@ -217,7 +224,27 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      app_users_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          nickname: string | null
+          permission: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          nickname?: string | null
+          permission?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          nickname?: string | null
+          permission?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
