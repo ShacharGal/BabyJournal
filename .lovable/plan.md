@@ -1,128 +1,44 @@
 
-# Simple Password Login System
 
-## Overview
+## Diagnosis
 
-A minimal login system where you manually add users in the backend. Users enter a password to log in - no email, no signup, just password.
+I've traced the full flow and found the root cause.
 
----
+**The problem:** Your edge function dynamically determines the `redirect_uri` from the request's `Origin` header. When you browse via the Lovable editor, the preview loads at `https://6702f4cb-498b-4d9e-80be-b9cdeecfd235.lovableproject.com`, so the function sends that as the redirect URI to Google. But your Google Cloud Console screenshot shows only the `.lovable.app` domain is configured as an authorized redirect URI.
 
-## How It Works
+Even though you said you added the `.lovableproject.com` domain, Google's 403 "you do not have access to this page" error (rather than a `redirect_uri_mismatch`) specifically suggests one of two things:
+1. The redirect URI is still not matching exactly (e.g., trailing slash, typo, or it wasn't saved)
+2. The test user addition hasn't propagated yet (can take a few minutes)
 
-1. **You add users** in the backend table with: password, nickname, and permission level
-2. **Users see a login screen** with just a password field
-3. **On login**, the system finds the matching password and logs them in
-4. **Permissions control access**:
-   - `full` = can add babies, upload entries, connect Drive
-   - `view_only` = can only browse content
+**The fix has two parts:**
 
----
+### Part 1 — Verify Google Cloud Console (manual)
+In your Google Cloud Console credentials, ensure **both** of these are present as **Authorized redirect URIs** (no trailing slash):
+- `https://id-preview--6702f4cb-498b-4d9e-80be-b9cdeecfd235.lovable.app`
+- `https://6702f4cb-498b-4d9e-80be-b9cdeecfd235.lovableproject.com`
 
-## Database Changes
+And **both** as **Authorized JavaScript origins** too.
 
-### New Table: `app_users`
+Also double check under OAuth consent screen → Test users that your Gmail address is listed. Try removing and re-adding it.
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Auto-generated ID |
-| password | text | Login password (you set this) |
-| nickname | text | Display name shown in app |
-| permission | text | Either "full" or "view_only" |
-| created_at | timestamp | When user was added |
+### Part 2 — Code fix: make redirect URI explicit
+Instead of relying on the `Origin` header (which changes depending on where you access the app), update `drive-auth/index.ts` to accept the redirect URI from the frontend, so it always matches exactly what the browser URL is.
 
-You'll add users directly in the backend by inserting rows into this table.
+**Changes:**
+- `src/components/GoogleDriveConnect.tsx`: Pass `window.location.origin` as `redirectUri` in the `get-auth-url` and `exchange-code` calls
+- `src/hooks/useGoogleDrive.ts`: Accept and forward `redirectUri` parameter in both `useInitiateGoogleAuth` and `useExchangeGoogleCode`
+- `supabase/functions/drive-auth/index.ts`: Read `redirectUri` from the request body instead of deriving it from the `Origin` header
 
----
+This ensures the redirect URI sent to Google always matches the actual browser URL, regardless of which domain variant is being used.
 
-## New Backend Function
-
-### `login` Edge Function
-
-- Receives a password from the frontend
-- Looks up matching user in `app_users` table
-- Returns user info (nickname, permission) if found
-- Returns error if password not found
-
----
-
-## Frontend Changes
-
-### Login Screen
-
-When not logged in, users see:
-- App title and logo
-- Single password input field
-- "Enter" button
-- Clean, simple design
-
-### After Login
-
-- User's nickname shown in header
-- Logout button available
-- Components hidden based on permission:
-  - `view_only` users don't see Add Baby, Upload Entry, or Connect Drive forms
-  - `view_only` users see a "View only" badge
-
-### Session Storage
-
-- Login state stored in browser's localStorage
-- Persists across page refreshes
-- Cleared on logout
-
----
-
-## File Changes
-
-### New Files
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/login/index.ts` | Verifies password and returns user |
-| `src/pages/Login.tsx` | Password input screen |
-| `src/hooks/useAuth.ts` | Manages login state and user info |
-| `src/components/UserHeader.tsx` | Shows nickname and logout button |
-
-### Modified Files
-
-| File | Change |
-|------|--------|
-| `src/App.tsx` | Add Login route, check auth state |
-| `src/pages/Index.tsx` | Hide edit components for view_only users |
-| `src/components/AddBabyForm.tsx` | Hide if view_only |
-| `src/components/UploadEntryForm.tsx` | Hide if view_only |
-| `src/components/GoogleDriveConnect.tsx` | Hide if view_only |
-
----
-
-## Implementation Steps
-
-1. **Create `app_users` table** in database with password, nickname, permission columns
-2. **Create `login` edge function** to verify passwords
-3. **Build Login page** with password field
-4. **Create useAuth hook** to manage session state
-5. **Add UserHeader component** showing nickname + logout
-6. **Update App.tsx** to route based on login state
-7. **Update Index.tsx** to check permissions and hide components
-
----
-
-## Setting Up Users
-
-After implementation, you'll add users by inserting rows in the backend:
-
+### Technical detail
 ```text
-Example users you might add:
-- password: "parent123", nickname: "Mom", permission: "full"
-- password: "parent456", nickname: "Dad", permission: "full"  
-- password: "grandma", nickname: "Grandma", permission: "view_only"
+Current flow:
+  Browser (lovableproject.com) → edge fn reads Origin header → sends redirect_uri to Google
+  Google checks: "Is lovableproject.com in authorized URIs?" → 403
+
+Fixed flow:
+  Browser sends window.location.origin → edge fn forwards it as redirect_uri
+  Same URI used for both auth URL generation AND code exchange → consistent match
 ```
 
----
-
-## Technical Notes
-
-- Passwords are stored as plain text in the database (simple approach since you control access)
-- The edge function uses the service role key to query the table
-- RLS policy allows only the edge function (via service role) to read the passwords
-- Frontend stores only nickname and permission in localStorage (never the password)
-- No signup flow - all user management is done by you in the backend
