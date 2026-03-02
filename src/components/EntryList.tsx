@@ -59,7 +59,8 @@ interface EntryListProps {
 
 export function EntryList({ babyId }: EntryListProps) {
   const [search, setSearch] = useState("");
-  const { data: entries, isLoading } = useEntries(babyId);
+  const { data, isLoading } = useEntries(babyId);
+  const entries = data?.pages.flat() ?? [];
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
 

@@ -1,3 +1,4 @@
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEntries, useDeleteEntry, type EntryWithTags } from "@/hooks/useEntries";
@@ -11,11 +12,10 @@ import {
   Mic,
   FileText,
   Trash2,
-  ExternalLink,
-  Calendar,
   Users,
   Heart,
   Pencil,
+  X,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 
@@ -51,17 +51,43 @@ interface MemoryFeedProps {
 }
 
 export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
-  const { data: entries, isLoading } = useEntries(babyId);
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useEntries(babyId);
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
   const { canEdit } = useAuthContext();
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
 
-  const filteredEntries = entries?.filter((entry) => {
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const allEntries = data?.pages.flat() ?? [];
+
+  const filteredEntries = allEntries.filter((entry) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return (
       entry.description?.toLowerCase().includes(s) ||
-      entry.file_name?.toLowerCase().includes(s) ||
       entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s))
     );
   });
@@ -86,7 +112,7 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
     );
   }
 
-  if (!filteredEntries || filteredEntries.length === 0) {
+  if (filteredEntries.length === 0) {
     return (
       <div className="text-center py-20 text-muted-foreground">
         <Heart className="h-12 w-12 mx-auto mb-4 opacity-20" />
@@ -101,20 +127,52 @@ export function MemoryFeed({ babyId, search, onEditEntry }: MemoryFeedProps) {
   }
 
   return (
-    <div className="space-y-4">
-      {filteredEntries.map((entry) => (
-        <MemoryCard
-          key={entry.id}
-          entry={entry}
-          babyName={getBabyName(entry.baby_id)}
-          babyDob={getBabyDob(entry.baby_id)}
-          onDelete={handleDelete}
-          onEdit={onEditEntry}
-          showBaby={!babyId}
-          canEdit={canEdit}
-        />
-      ))}
-    </div>
+    <>
+      <div className="space-y-4">
+        {filteredEntries.map((entry) => (
+          <MemoryCard
+            key={entry.id}
+            entry={entry}
+            babyName={getBabyName(entry.baby_id)}
+            babyDob={getBabyDob(entry.baby_id)}
+            onDelete={handleDelete}
+            onEdit={onEditEntry}
+            showBaby={!babyId}
+            canEdit={canEdit}
+            onImageTap={setLightboxUrl}
+          />
+        ))}
+        <div ref={sentinelRef} className="h-1" />
+        {isFetchingNextPage && (
+          <div className="flex justify-center py-4">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        )}
+      </div>
+
+      {/* Lightbox */}
+      {lightboxUrl && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setLightboxUrl(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 text-white hover:bg-white/20"
+            onClick={() => setLightboxUrl(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <img
+            src={lightboxUrl}
+            alt="Full size"
+            className="max-h-[90vh] max-w-[95vw] object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
+    </>
   );
 }
 
@@ -126,20 +184,29 @@ interface MemoryCardProps {
   onEdit?: (entry: EntryWithTags) => void;
   showBaby: boolean;
   canEdit: boolean;
+  onImageTap: (url: string) => void;
 }
 
-function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit }: MemoryCardProps) {
+function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit, onImageTap }: MemoryCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
+
+  const descriptionLong = (entry.description?.length ?? 0) > 200;
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {/* Thumbnail */}
+      {/* Square thumbnail — tap to view full */}
       {entry.thumbnail_url && (
-        <img
-          src={entry.thumbnail_url}
-          alt={entry.description || "Memory"}
-          className="w-full h-56 object-cover"
-        />
+        <div
+          className="w-full aspect-square overflow-hidden cursor-pointer"
+          onClick={() => onImageTap(entry.thumbnail_url!)}
+        >
+          <img
+            src={entry.thumbnail_url}
+            alt={entry.description || "Memory"}
+            className="w-full h-full object-cover"
+          />
+        </div>
       )}
 
       <div className="p-4 space-y-3">
@@ -163,21 +230,6 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
             )}
           </div>
           <div className="flex items-center gap-1 shrink-0">
-            {entry.drive_file_id && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() =>
-                  window.open(
-                    `https://drive.google.com/file/d/${entry.drive_file_id}/view`,
-                    "_blank"
-                  )
-                }
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
-            )}
             {canEdit && (
               <Button
                 variant="ghost"
@@ -201,14 +253,28 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
           </div>
         </div>
 
-        {/* Description */}
+        {/* Description with see more */}
         {entry.description && (
-          <p className="text-sm">{entry.description}</p>
+          <div>
+            <p className={`text-sm whitespace-pre-wrap ${!expanded && descriptionLong ? "line-clamp-4" : ""}`}>
+              {entry.description}
+            </p>
+            {descriptionLong && (
+              <button
+                className="text-xs text-muted-foreground mt-1 hover:underline"
+                onClick={() => setExpanded(!expanded)}
+              >
+                {expanded ? "Show less" : "See more..."}
+              </button>
+            )}
+          </div>
         )}
 
-        {/* File name */}
-        {entry.file_name && (
-          <p className="text-xs text-muted-foreground">{entry.file_name}</p>
+        {/* Added by */}
+        {entry.created_by_nickname && (
+          <p className="text-xs text-muted-foreground">
+            Added by {entry.created_by_nickname}
+          </p>
         )}
 
         {/* Tags */}

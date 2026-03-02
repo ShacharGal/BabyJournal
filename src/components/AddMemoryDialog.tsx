@@ -22,6 +22,7 @@ import { useCreateEntry, useUpdateEntry, type EntryWithTags } from "@/hooks/useE
 import { useTags } from "@/hooks/useTags";
 import { useGoogleConnection, useUploadToDrive } from "@/hooks/useGoogleDrive";
 import { toast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save } from "lucide-react";
 import { generateAndUploadThumbnail } from "@/lib/thumbnails";
 
@@ -59,6 +60,7 @@ export function AddMemoryDialog({
   const createEntry = useCreateEntry();
   const updateEntry = useUpdateEntry();
   const uploadToDrive = useUploadToDrive();
+  const { user } = useAuthContext();
 
   const isEditing = !!editEntry;
   const isConnected = !!googleConnection?.refresh_token;
@@ -170,6 +172,7 @@ export function AddMemoryDialog({
             file_name: file?.name,
             file_size: file?.size,
             mime_type: file?.type,
+            created_by: user?.id,
           },
           tagIds: selectedTags,
         });
