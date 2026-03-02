@@ -1,15 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useBabies } from "@/hooks/useBabies";
-import { Baby, FolderOpen, Loader2 } from "lucide-react";
-import { format } from "date-fns";
+import { Users, FolderOpen, Loader2 } from "lucide-react";
+import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 
-interface BabyListProps {
+function formatAge(dateOfBirth: string): string {
+  const dob = new Date(dateOfBirth);
+  const now = new Date();
+  const months = differenceInMonths(now, dob);
+  if (months < 1) {
+    const days = differenceInDays(now, dob);
+    return `${days} day${days !== 1 ? "s" : ""} old`;
+  }
+  if (months < 24) {
+    return `${months} month${months !== 1 ? "s" : ""} old`;
+  }
+  const years = differenceInYears(now, dob);
+  const rem = months - years * 12;
+  return rem > 0
+    ? `${years} year${years !== 1 ? "s" : ""}, ${rem} month${rem !== 1 ? "s" : ""} old`
+    : `${years} year${years !== 1 ? "s" : ""} old`;
+}
+
+interface ChildListProps {
   selectedBabyId?: string;
   onSelectBaby: (babyId: string | undefined) => void;
 }
 
-export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
+export function ChildList({ selectedBabyId, onSelectBaby }: ChildListProps) {
   const { data: babies, isLoading } = useBabies();
 
   if (isLoading) {
@@ -17,8 +35,8 @@ export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Baby className="h-5 w-5" />
-            Your Babies
+            <Users className="h-5 w-5" />
+            Your Children
           </CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-center py-8">
@@ -33,13 +51,13 @@ export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Baby className="h-5 w-5" />
-            Your Babies
+            <Users className="h-5 w-5" />
+            Your Children
           </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-sm text-muted-foreground text-center py-4">
-            No babies added yet. Add your first baby above!
+            No children added yet. Add your first child above!
           </p>
         </CardContent>
       </Card>
@@ -50,8 +68,8 @@ export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Baby className="h-5 w-5" />
-          Your Babies
+          <Users className="h-5 w-5" />
+          Your Children
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -63,7 +81,7 @@ export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
               : "border-transparent hover:bg-muted"
           }`}
         >
-          <span className="font-medium">All Babies</span>
+          <span className="font-medium">All Children</span>
         </button>
         
         {babies.map((baby) => (
@@ -85,9 +103,15 @@ export function BabyList({ selectedBabyId, onSelectBaby }: BabyListProps) {
                 </Badge>
               )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Added {format(new Date(baby.created_at), "MMM d, yyyy")}
-            </p>
+            {baby.date_of_birth ? (
+              <p className="text-xs text-muted-foreground mt-1">
+                Born {format(new Date(baby.date_of_birth), "MMM d, yyyy")} · {formatAge(baby.date_of_birth)}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">
+                Added {format(new Date(baby.created_at), "MMM d, yyyy")}
+              </p>
+            )}
           </button>
         ))}
       </CardContent>

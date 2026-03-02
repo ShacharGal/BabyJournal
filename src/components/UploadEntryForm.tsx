@@ -158,10 +158,10 @@ export function UploadEntryForm() {
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Baby Selection */}
           <div>
-            <label className="text-sm font-medium mb-2 block">Baby</label>
+            <label className="text-sm font-medium mb-2 block">Child</label>
             <Select value={selectedBabyId} onValueChange={setSelectedBabyId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select a baby" />
+                <SelectValue placeholder="Select a child" />
               </SelectTrigger>
               <SelectContent>
                 {babies?.map((baby) => (
