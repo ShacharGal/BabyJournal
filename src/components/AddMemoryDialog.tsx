@@ -305,19 +305,21 @@ export function AddMemoryDialog({
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
           </div>
 
-          {/* File - only show for new entries */}
+          {/* Hidden file input — always rendered */}
+          <Input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*,video/*,audio/*"
+            onChange={handleFileChange}
+            className="hidden"
+            id="dialog-file-upload"
+          />
+
+          {/* File - new entry mode */}
           {!isEditing && (
             <div>
               <label className="text-sm font-medium mb-2 block">File (optional)</label>
               <div className="flex items-center gap-2">
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*,audio/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="dialog-file-upload"
-                />
                 <Button
                   type="button"
                   variant="outline"
@@ -354,42 +356,36 @@ export function AddMemoryDialog({
             <div>
               <label className="text-sm font-medium mb-2 block">Attached file</label>
               <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground flex-1 truncate">{editEntry.file_name}</p>
+                <p className="text-sm text-muted-foreground flex-1 min-w-0 truncate">{editEntry.file_name}</p>
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
+                  className="shrink-0"
                   onClick={() => fileInputRef.current?.click()}
                 >
                   Replace
                 </Button>
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="destructive"
                   size="sm"
+                  className="shrink-0"
                   onClick={() => setRemoveExistingFile(true)}
                 >
-                  <X className="h-4 w-4" />
+                  Delete
                 </Button>
               </div>
             </div>
           )}
 
-          {/* Show file picker in edit mode when replacing or after removing */}
+          {/* Show replacement file or "file removed" state in edit mode */}
           {isEditing && (removeExistingFile || file) && (
             <div>
               <label className="text-sm font-medium mb-2 block">
-                {file ? "Replacement file" : "File removed"}
+                {file ? "Replacement file" : "File will be deleted"}
               </label>
               <div className="flex items-center gap-2">
-                <Input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*,video/*,audio/*"
-                  onChange={handleFileChange}
-                  className="hidden"
-                  id="dialog-file-upload-edit"
-                />
                 <Button
                   type="button"
                   variant="outline"
@@ -397,26 +393,25 @@ export function AddMemoryDialog({
                   className="w-full"
                 >
                   <TypeIcon className="h-4 w-4 mr-2" />
-                  {file ? file.name : "Choose replacement file"}
+                  {file ? file.name : "Choose replacement file (optional)"}
                 </Button>
-                {(file || removeExistingFile) && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setFile(null);
-                      setRemoveExistingFile(false);
-                      if (fileInputRef.current) fileInputRef.current.value = "";
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    setFile(null);
+                    setRemoveExistingFile(false);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
               {!file && removeExistingFile && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  The existing file will be deleted. Choose a new file or undo.
+                <p className="text-xs text-destructive mt-1">
+                  The existing file will be deleted on save. Click ✕ to undo.
                 </p>
               )}
             </div>
