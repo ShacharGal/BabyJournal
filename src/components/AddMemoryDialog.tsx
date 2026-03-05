@@ -273,7 +273,7 @@ export function AddMemoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Memory" : "Add Memory"}</DialogTitle>
           <DialogDescription>
@@ -281,7 +281,7 @@ export function AddMemoryDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 min-w-0">
           {/* Child selection */}
           <div>
             <label className="text-sm font-medium mb-2 block">Child</label>
@@ -401,7 +401,7 @@ export function AddMemoryDialog({
           {isEditing && editEntry.file_name && !removeExistingFile && !file && (
             <div>
               <label className="text-sm font-medium mb-2 block">Attached file</label>
-              <div className="flex items-center gap-2">
+              <div className="flex w-full min-w-0 items-center gap-2">
                 <p className="text-sm text-muted-foreground flex-1 min-w-0 truncate">{editEntry.file_name}</p>
                 <Button
                   type="button"
