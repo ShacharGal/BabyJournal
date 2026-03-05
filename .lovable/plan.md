@@ -1,88 +1,71 @@
 
 
-## Blueprint: Transforming Family Journal into a feed-based app
+## Audio Support for Memories
 
-Here is the recommended implementation order, reasoning, and what each phase involves.
+### Architecture Decision: Where to Store Audio
 
----
+Two options exist for audio storage:
 
-### Phase 1: Layout overhaul — Feed + navigation + "Add memory" dialog
-**Why first**: This is the foundation everything else builds on. Editing, thumbnails, and photo viewing all depend on the new card/feed layout existing first.
+1. **Google Drive** (like photos/videos) -- requires a proxy edge function for streaming since Drive files are private, adding complexity and latency.
+2. **Supabase storage bucket** (like thumbnails) -- gives direct public URLs that work natively with `<audio src="...">`. Audio clips for baby moments are typically short (seconds to a couple minutes), making file sizes very manageable.
 
-**What changes**:
-- Replace the current 3-column grid layout with a single-column, vertically scrollable **memory feed** (centered, max-width ~600px, Instagram-style)
-- Add a **top navigation bar** with:
-  - Child selector/toggle (dropdown or tabs to switch between children)
-  - Hamburger/settings menu (sheet or dropdown) containing: Google Drive connection, manage users (admin only), logout
-  - Search icon that expands into a search input
-- Add a **floating "+" button** (bottom center, fixed position) that opens a **Dialog** with the full "Add Memory" form
-  - Pre-fill the child field with whichever child is currently selected in the nav
-- Move `AddChildForm` into the settings menu/sheet (it's a one-time action, doesn't belong on the main screen)
+**Recommendation: Supabase storage bucket called `audio`**. This gives native inline playback with zero auth complexity. No redirects, no proxies, just a URL in an `<audio>` tag.
 
-**Components affected**: `Index.tsx` (full rewrite of layout), `UploadEntryForm` (move into a Dialog), `EntryList` (restyle as feed cards), new `AppNavBar` component, `ChildList` (becomes a dropdown/popover in nav)
+### Data Model Change
 
----
-
-### Phase 2: Edit memories
-**Why second**: Now that we have the feed with individual memory cards and the "Add Memory" dialog, we reuse the same dialog for editing.
-
-**What changes**:
-- Add a pencil icon button on each memory card (visible to editors)
-- Clicking it opens the same Add Memory dialog, but pre-populated with the existing memory's data (description, date, tags, child, file info)
-- Add an `useUpdateEntry` mutation in `useEntries.ts` that updates the entry and re-syncs tags
-- The dialog gets a mode prop: `"create"` vs `"edit"` — in edit mode it calls update instead of insert
-
----
-
-### Phase 3: Thumbnails — discuss and implement
-**Why third**: With the feed looking good, we can enhance it visually. This is a discussion + implementation step.
-
-**Discussion points**:
-- Google Drive's `thumbnailLink` requires an authenticated request — it's not a public URL, so it won't render in an `<img>` tag directly
-- **Options**:
-  - (A) Use the Drive API to generate a **public shareable link** for each photo and store that — simplest but makes photos semi-public
-  - (B) Create a backend function that **proxies** the thumbnail: the app calls your edge function, which fetches from Drive with the stored access token and returns the image — keeps photos private but adds latency
-  - (C) Store a **small thumbnail copy** in your own storage bucket at upload time — fastest loading, fully private, small storage cost
-- Recommendation: Option C (store thumbnails in a storage bucket) gives the best UX and works offline from Drive
-
----
-
-### Phase 4: Seamless photo viewing in feed
-**Why fourth**: Depends on the thumbnail/photo strategy from Phase 3.
-
-**What changes**:
-- When a memory has a photo, show it directly in the feed card (not behind a link)
-- Clicking the photo opens a **full-screen lightbox** (Dialog with the full-res image)
-- The image source depends on Phase 3's decision:
-  - If proxied: an edge function endpoint that streams the image using the stored Google token
-  - If stored thumbnails: direct URL from storage bucket for the card, proxy for full-res
-- Remove the current "open in Drive" link as the primary action (keep as secondary option)
-
----
-
-### Phase 5: Add photos from Google Photos
-**Why last**: This is a new integration (Google Photos API is separate from Drive API) and depends on the upload/display pipeline being solid.
-
-**What changes**:
-- Google Photos API requires the `photoslibrary.readonly` scope — needs to be added to the OAuth flow
-- New edge function `google-photos` that:
-  - Lists the user's recent Google Photos
-  - Returns photo metadata + thumbnail URLs
-- In the Add Memory dialog, add a "Pick from Google Photos" button that opens a picker showing recent photos
-  - User selects a photo → the app copies it to Drive (into the child's folder) and creates the entry
-- Alternative simpler approach: use Google Photos' sharing mechanism to get a direct URL without copying
-
----
-
-### Summary: Implementation order
+A memory can have **both** a photo/video (on Drive) **and** an audio clip. This requires new columns on `entries`:
 
 ```text
-Phase 1: Layout (feed + nav + floating add button)     ← do now
-Phase 2: Edit memories                                  ← quick win after layout
-Phase 3: Thumbnail strategy (discuss → implement)       ← enhances the feed
-Phase 4: Seamless photo viewing                         ← depends on Phase 3
-Phase 5: Google Photos integration                      ← new API scope + picker
+entries table (new columns):
+  audio_storage_path  text     -- path in the "audio" Supabase bucket
+  audio_url           text     -- public URL for inline playback
+  audio_file_name     text     -- original file name
+  audio_file_size     integer  -- bytes
 ```
 
-Each phase is testable independently. I recommend we start with Phase 1 — the layout overhaul. Shall I proceed?
+The existing `drive_file_id`, `file_name`, `type` columns continue to handle photo/video files. Audio becomes a separate, optional attachment on any memory.
+
+The `type` column semantics shift slightly: it describes the *primary* media (photo/video/text). An audio clip can exist on any type.
+
+### Storage Setup
+
+- Create a Supabase storage bucket `audio` (public, so URLs work in `<audio>` tags).
+
+### Upload Flow (AddMemoryDialog)
+
+- Add a second file picker row: "Audio (optional)" accepting `audio/*`.
+- On submit, if an audio file is selected, upload it to the `audio` bucket with path `{entryId}.webm` (or original extension), then save the public URL to `audio_url`.
+- In edit mode: show Replace/Delete controls for audio, same pattern as the main file.
+
+### Feed Presentation (MemoryFeed)
+
+- If `entry.audio_url` exists, render an inline `<audio controls>` element below the description.
+- Styled compactly: small play bar with the filename shown.
+- If the memory has a photo thumbnail AND audio, both display: the photo card as usual, plus the audio player underneath.
+- If audio-only (no photo), show a styled banner with a Mic icon and waveform visual hint, plus the audio player.
+
+### Files to Change
+
+1. **Database migration**: Add `audio_storage_path`, `audio_url`, `audio_file_name`, `audio_file_size` columns to `entries`. Create `audio` storage bucket (public).
+2. **`src/components/AddMemoryDialog.tsx`**: Add audio file picker, upload to Supabase storage on submit, handle audio replace/delete in edit mode.
+3. **`src/components/MemoryFeed.tsx`**: Render `<audio controls src={entry.audio_url}>` when present. Show Mic icon banner for audio-only entries (no thumbnail).
+4. **`src/lib/audioUpload.ts`** (new): Helper to upload/delete audio files in the `audio` storage bucket.
+5. **`src/hooks/useEntries.ts`**: No changes needed (select * picks up new columns automatically).
+
+### Feed Card Variants
+
+```text
+Photo + Audio:    [thumbnail image]
+                  [description, tags...]
+                  [▶ ━━━━━━━━━━━ 0:42]
+
+Audio only:       [gradient banner + 🎤 icon]
+                  [description, tags...]
+                  [▶ ━━━━━━━━━━━ 0:42]
+
+Photo only:       [thumbnail image]        (unchanged)
+                  [description, tags...]
+
+Text only:        [description, tags...]   (unchanged)
+```
 
