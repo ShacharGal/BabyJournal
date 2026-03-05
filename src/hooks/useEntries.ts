@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useDeleteFromDrive } from "@/hooks/useGoogleDrive";
 import { deleteThumbnail } from "@/lib/thumbnails";
+import { deleteAudio } from "@/lib/audioUpload";
 
 export type Entry = Tables<"entries">;
 export type EntryInsert = TablesInsert<"entries">;
@@ -176,7 +177,7 @@ export function useDeleteEntry() {
     mutationFn: async (entryId: string) => {
       const { data: entry } = await supabase
         .from("entries")
-        .select("drive_file_id")
+        .select("drive_file_id, audio_storage_path")
         .eq("id", entryId)
         .single();
 
@@ -192,6 +193,14 @@ export function useDeleteEntry() {
         await deleteThumbnail(entryId);
       } catch (e) {
         console.warn("Failed to delete thumbnail:", e);
+      }
+
+      if ((entry as any)?.audio_storage_path) {
+        try {
+          await deleteAudio((entry as any).audio_storage_path);
+        } catch (e) {
+          console.warn("Failed to delete audio:", e);
+        }
       }
 
       const { error } = await supabase

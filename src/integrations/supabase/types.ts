@@ -67,6 +67,10 @@ export type Database = {
       }
       entries: {
         Row: {
+          audio_file_name: string | null
+          audio_file_size: number | null
+          audio_storage_path: string | null
+          audio_url: string | null
           baby_id: string
           created_at: string
           created_by: string | null
@@ -83,6 +87,10 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          audio_file_name?: string | null
+          audio_file_size?: number | null
+          audio_storage_path?: string | null
+          audio_url?: string | null
           baby_id: string
           created_at?: string
           created_by?: string | null
@@ -99,6 +107,10 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          audio_file_name?: string | null
+          audio_file_size?: number | null
+          audio_storage_path?: string | null
+          audio_url?: string | null
           baby_id?: string
           created_at?: string
           created_by?: string | null
