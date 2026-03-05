@@ -71,7 +71,6 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const allEntries = data?.pages.flat() ?? [];
 
   const filteredEntries = allEntries.filter((entry) => {
-    // Text filter
     if (filters.text) {
       const s = filters.text.toLowerCase();
       const matchesText =
@@ -79,12 +78,10 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
         entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s));
       if (!matchesText) return false;
     }
-    // Tag filter
     if (filters.tagIds.length > 0) {
       const entryTagIds = entry.entry_tags.map((et) => et.tag_id);
       if (!filters.tagIds.some((id) => entryTagIds.includes(id))) return false;
     }
-    // Date range
     if (filters.dateFrom && entry.date < filters.dateFrom) return false;
     if (filters.dateTo && entry.date > filters.dateTo) return false;
     return true;
@@ -192,10 +189,15 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
   const [expanded, setExpanded] = useState(false);
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
   const descriptionLong = (entry.description?.length ?? 0) > 200;
+  const audioUrl = (entry as any).audio_url as string | null;
+  const audioFileName = (entry as any).audio_file_name as string | null;
+  const hasAudio = !!audioUrl;
+  const hasThumbnail = !!entry.thumbnail_url;
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {entry.thumbnail_url && (
+      {/* Thumbnail image */}
+      {hasThumbnail && (
         <div
           className="w-full aspect-square overflow-hidden cursor-pointer"
           onClick={() => onImageTap(entry.thumbnail_url!)}
@@ -205,6 +207,16 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
             alt={entry.description || "Memory"}
             className="w-full h-full object-cover"
           />
+        </div>
+      )}
+
+      {/* Audio-only banner (no photo) */}
+      {!hasThumbnail && hasAudio && (
+        <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2">
+          <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+            <Mic className="h-7 w-7 text-primary" />
+          </div>
+          <span className="text-xs text-muted-foreground">{audioFileName || "Audio clip"}</span>
         </div>
       )}
 
@@ -262,6 +274,14 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
           </div>
         )}
 
+        {/* Inline audio player */}
+        {hasAudio && (
+          <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-2">
+            <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
+            <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
+          </div>
+        )}
+
         {entry.created_by_nickname && (
           <p className="text-xs text-muted-foreground">
             Added by {entry.created_by_nickname}
@@ -289,3 +309,4 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
     </div>
   );
 }
+
