@@ -18,13 +18,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBabies } from "@/hooks/useBabies";
-import { useCreateEntry, useUpdateEntry, type EntryWithTags } from "@/hooks/useEntries";
-import { useGoogleConnection, useUploadToDrive } from "@/hooks/useGoogleDrive";
+import { useCreateEntry, useUpdateEntry, type EntryWithTags, type EntryInsert } from "@/hooks/useEntries";
+import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hooks/useGoogleDrive";
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save } from "lucide-react";
-import { generateAndUploadThumbnail } from "@/lib/thumbnails";
+import { generateAndUploadThumbnail, deleteThumbnail } from "@/lib/thumbnails";
 
 const typeIcons = {
   photo: Image,
@@ -62,9 +62,11 @@ export function AddMemoryDialog({
   const uploadToDrive = useUploadToDrive();
   const { user } = useAuthContext();
 
+  const deleteFromDrive = useDeleteFromDrive();
   const isEditing = !!editEntry;
   const isConnected = !!googleConnection?.refresh_token;
   const selectedBaby = babies?.find((b) => b.id === selectedBabyId);
+  const [removeExistingFile, setRemoveExistingFile] = useState(false);
 
   // Pre-fill form when dialog opens
   useEffect(() => {
@@ -76,6 +78,7 @@ export function AddMemoryDialog({
       setDate(editEntry.date);
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
+      setRemoveExistingFile(false);
     } else {
       // Reset everything for create mode
       resetForm();
@@ -113,6 +116,7 @@ export function AddMemoryDialog({
     setDescription("");
     setFile(null);
     setSelectedTags([]);
+    setRemoveExistingFile(false);
     setDate(new Date().toISOString().split("T")[0]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -134,16 +138,72 @@ export function AddMemoryDialog({
 
     try {
       if (isEditing) {
-        // Update existing entry
-        await updateEntry.mutateAsync({
-          entryId: editEntry.id,
-          entry: {
-            baby_id: selectedBabyId,
-            description: description.trim() || null,
-            date,
-          },
-          tagIds: selectedTags,
-        });
+        const entryUpdate: Partial<EntryInsert> = {
+          baby_id: selectedBabyId,
+          description: description.trim() || null,
+          date,
+        };
+
+        // Handle file replacement or removal
+        const hadFile = !!editEntry.drive_file_id || !!editEntry.file_name;
+        const wantsNewFile = !!file;
+        const wantsRemoveFile = removeExistingFile;
+
+        if (hadFile && (wantsNewFile || wantsRemoveFile)) {
+          // Delete old Drive file
+          if (editEntry.drive_file_id) {
+            try {
+              await deleteFromDrive.mutateAsync(editEntry.drive_file_id);
+            } catch (e) {
+              console.warn("Failed to delete old Drive file:", e);
+            }
+          }
+          // Delete old thumbnail
+          try {
+            await deleteThumbnail(editEntry.id);
+          } catch (e) {
+            console.warn("Failed to delete old thumbnail:", e);
+          }
+        }
+
+        if (wantsNewFile) {
+          // Upload replacement file
+          let driveFileId: string | undefined;
+          if (isConnected && selectedBaby?.drive_folder_id) {
+            const result = await uploadToDrive.mutateAsync({
+              file,
+              folderId: selectedBaby.drive_folder_id,
+            });
+            driveFileId = result.fileId;
+          }
+
+          entryUpdate.type = getFileType(file.type);
+          entryUpdate.drive_file_id = driveFileId || null;
+          entryUpdate.file_name = file.name;
+          entryUpdate.file_size = file.size;
+          entryUpdate.mime_type = file.type;
+
+          await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: selectedTags });
+
+          // Generate thumbnail for new image
+          if (file.type.startsWith("image/")) {
+            const thumbUrl = await generateAndUploadThumbnail(file, editEntry.id);
+            if (thumbUrl) {
+              await updateEntry.mutateAsync({ entryId: editEntry.id, entry: { thumbnail_url: thumbUrl } });
+            }
+          }
+        } else if (wantsRemoveFile) {
+          // Clear file fields
+          entryUpdate.type = "text";
+          entryUpdate.drive_file_id = null;
+          entryUpdate.file_name = null;
+          entryUpdate.file_size = null;
+          entryUpdate.mime_type = null;
+          entryUpdate.thumbnail_url = null;
+          await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: selectedTags });
+        } else {
+          await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: selectedTags });
+        }
 
         toast({ title: "Memory updated!", description: "Your changes have been saved." });
       } else {
@@ -289,11 +349,76 @@ export function AddMemoryDialog({
             </div>
           )}
 
-          {/* Existing file info in edit mode */}
-          {isEditing && editEntry.file_name && (
+          {/* Existing file in edit mode — replace or delete */}
+          {isEditing && editEntry.file_name && !removeExistingFile && !file && (
             <div>
               <label className="text-sm font-medium mb-2 block">Attached file</label>
-              <p className="text-sm text-muted-foreground">{editEntry.file_name}</p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground flex-1 truncate">{editEntry.file_name}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Replace
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setRemoveExistingFile(true)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Show file picker in edit mode when replacing or after removing */}
+          {isEditing && (removeExistingFile || file) && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                {file ? "Replacement file" : "File removed"}
+              </label>
+              <div className="flex items-center gap-2">
+                <Input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,video/*,audio/*"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="dialog-file-upload-edit"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <TypeIcon className="h-4 w-4 mr-2" />
+                  {file ? file.name : "Choose replacement file"}
+                </Button>
+                {(file || removeExistingFile) && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setFile(null);
+                      setRemoveExistingFile(false);
+                      if (fileInputRef.current) fileInputRef.current.value = "";
+                    }}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              {!file && removeExistingFile && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  The existing file will be deleted. Choose a new file or undo.
+                </p>
+              )}
             </div>
           )}
 
