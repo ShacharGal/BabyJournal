@@ -351,7 +351,53 @@ export function AddMemoryDialog({
             </div>
           )}
 
-          {/* Existing file in edit mode — replace or delete */}
+          {/* Edit mode: no existing file — allow adding one */}
+          {isEditing && !editEntry.file_name && !file && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">File (optional)</label>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Add file
+              </Button>
+            </div>
+          )}
+
+          {/* Edit mode: no existing file but new file chosen */}
+          {isEditing && !editEntry.file_name && file && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">New file</label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full"
+                >
+                  <TypeIcon className="h-4 w-4 mr-2" />
+                  {file.name}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="shrink-0"
+                  onClick={() => {
+                    setFile(null);
+                    if (fileInputRef.current) fileInputRef.current.value = "";
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Edit mode: has existing file — replace or delete */}
           {isEditing && editEntry.file_name && !removeExistingFile && !file && (
             <div>
               <label className="text-sm font-medium mb-2 block">Attached file</label>
