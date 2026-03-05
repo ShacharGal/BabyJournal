@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { GoogleDriveConnect } from "@/components/GoogleDriveConnect";
 import { AddChildForm } from "@/components/AddChildForm";
+import { UserManagement } from "@/components/UserManagement";
 import { SearchFilters, type Filters } from "@/components/SearchFilters";
 
 interface AppNavBarProps {
@@ -173,6 +174,7 @@ export function AppNavBar({
 
             {canEdit && <GoogleDriveConnect />}
             {canEdit && <AddChildForm />}
+            {canEdit && <UserManagement />}
           </div>
         </SheetContent>
       </Sheet>
