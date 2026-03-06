@@ -22,9 +22,12 @@ import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hoo
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Upload, Loader2, X, Image, Video, Mic, FileText, Save } from "lucide-react";
+import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, ImagePlus } from "lucide-react";
 import { generateAndUploadThumbnail, deleteThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
+import { useAudioRecorder } from "@/hooks/useAudioRecorder";
+import { extractDateFromFile } from "@/lib/exifDate";
+import { GooglePhotosPicker } from "@/components/GooglePhotosPicker";
 
 const typeIcons = {
   photo: Image,
@@ -38,6 +41,12 @@ interface AddMemoryDialogProps {
   onOpenChange: (open: boolean) => void;
   preSelectedBabyId?: string;
   editEntry?: EntryWithTags | null;
+}
+
+function formatDuration(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
 export function AddMemoryDialog({
@@ -56,6 +65,10 @@ export function AddMemoryDialog({
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [removeExistingAudio, setRemoveExistingAudio] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [removeExistingFile, setRemoveExistingFile] = useState(false);
+  const [photosPickerOpen, setPhotosPickerOpen] = useState(false);
+
+  const recorder = useAudioRecorder();
 
   const { data: babies } = useBabies();
   const { data: googleConnection } = useGoogleConnection();
@@ -68,7 +81,6 @@ export function AddMemoryDialog({
   const isEditing = !!editEntry;
   const isConnected = !!googleConnection?.refresh_token;
   const selectedBaby = babies?.find((b) => b.id === selectedBabyId);
-  const [removeExistingFile, setRemoveExistingFile] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -103,9 +115,15 @@ export function AddMemoryDialog({
     return "text";
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
-    if (selectedFile) setFile(selectedFile);
+    if (selectedFile) {
+      setFile(selectedFile);
+      setPhotosPickerOpen(false);
+      // Try to extract date from EXIF
+      const exifDate = await extractDateFromFile(selectedFile);
+      if (exifDate) setDate(exifDate);
+    }
   };
 
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,20 +144,46 @@ export function AddMemoryDialog({
     setSelectedTags([]);
     setRemoveExistingFile(false);
     setRemoveExistingAudio(false);
+    setPhotosPickerOpen(false);
     setDate(new Date().toISOString().split("T")[0]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
+    recorder.discard();
+  };
+
+  const handleGooglePhotoSelect = (photoFile: File, creationTime?: string) => {
+    setFile(photoFile);
+    setPhotosPickerOpen(false);
+    if (creationTime) {
+      const d = new Date(creationTime);
+      if (!isNaN(d.getTime())) {
+        setDate(d.toISOString().split("T")[0]);
+      }
+    }
+  };
+
+  const getEffectiveAudioFile = (): File | null => {
+    if (audioFile) return audioFile;
+    if (recorder.blob) {
+      return new File([recorder.blob], `recording-${Date.now()}.webm`, { type: "audio/webm" });
+    }
+    return null;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Stop recording if still going
+    if (recorder.isRecording) recorder.stop();
+
+    const effectiveAudio = getEffectiveAudioFile();
 
     if (!selectedBabyId) {
       toast({ title: "Select a child", description: "Please choose which child this memory is for.", variant: "destructive" });
       return;
     }
 
-    if (!isEditing && !file && !audioFile && !description.trim()) {
+    if (!isEditing && !file && !effectiveAudio && !description.trim()) {
       toast({ title: "Add content", description: "Please add a file, audio, or description for this memory.", variant: "destructive" });
       return;
     }
@@ -211,7 +255,7 @@ export function AddMemoryDialog({
         }
 
         // Handle audio changes in edit mode
-        await handleAudioUpdate(editEntry.id, editEntry);
+        await handleAudioUpdate(editEntry.id, editEntry, effectiveAudio);
 
         toast({ title: "Memory updated!", description: "Your changes have been saved." });
       } else {
@@ -256,16 +300,16 @@ export function AddMemoryDialog({
           }
         }
 
-        // Upload audio if selected
-        if (audioFile && newEntry?.id) {
-          const { storagePath, publicUrl } = await uploadAudio(audioFile, newEntry.id);
+        // Upload audio if selected or recorded
+        if (effectiveAudio && newEntry?.id) {
+          const { storagePath, publicUrl } = await uploadAudio(effectiveAudio, newEntry.id);
           await updateEntry.mutateAsync({
             entryId: newEntry.id,
             entry: {
               audio_storage_path: storagePath,
               audio_url: publicUrl,
-              audio_file_name: audioFile.name,
-              audio_file_size: audioFile.size,
+              audio_file_name: effectiveAudio.name,
+              audio_file_size: effectiveAudio.size,
             } as any,
           });
         }
@@ -291,9 +335,9 @@ export function AddMemoryDialog({
     }
   };
 
-  const handleAudioUpdate = async (entryId: string, entry: EntryWithTags) => {
+  const handleAudioUpdate = async (entryId: string, entry: EntryWithTags, effectiveAudio: File | null) => {
     const hadAudio = !!(entry as any).audio_storage_path;
-    const wantsNewAudio = !!audioFile;
+    const wantsNewAudio = !!effectiveAudio;
     const wantsRemoveAudio = removeExistingAudio;
 
     if (hadAudio && (wantsNewAudio || wantsRemoveAudio)) {
@@ -305,14 +349,14 @@ export function AddMemoryDialog({
     }
 
     if (wantsNewAudio) {
-      const { storagePath, publicUrl } = await uploadAudio(audioFile, entryId);
+      const { storagePath, publicUrl } = await uploadAudio(effectiveAudio, entryId);
       await updateEntry.mutateAsync({
         entryId,
         entry: {
           audio_storage_path: storagePath,
           audio_url: publicUrl,
-          audio_file_name: audioFile.name,
-          audio_file_size: audioFile.size,
+          audio_file_name: effectiveAudio.name,
+          audio_file_size: effectiveAudio.size,
         } as any,
       });
     } else if (wantsRemoveAudio && hadAudio) {
@@ -330,6 +374,8 @@ export function AddMemoryDialog({
 
   const TypeIcon = file ? typeIcons[getFileType(file.type)] : Upload;
   const existingAudioName = isEditing ? (editEntry as any)?.audio_file_name : null;
+  const hasRecording = !!recorder.blob;
+  const hasAnyAudio = !!audioFile || hasRecording;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -392,11 +438,22 @@ export function AddMemoryDialog({
                   type="button"
                   variant="outline"
                   onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
+                  className="flex-1"
                 >
                   <TypeIcon className="h-4 w-4 mr-2" />
-                  {file ? file.name : "Choose photo or video"}
+                  {file ? file.name : "Choose file"}
                 </Button>
+                {isConnected && !file && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setPhotosPickerOpen(!photosPickerOpen)}
+                    title="Pick from Google Photos"
+                  >
+                    <ImagePlus className="h-4 w-4" />
+                  </Button>
+                )}
                 {file && (
                   <Button
                     type="button"
@@ -415,6 +472,17 @@ export function AddMemoryDialog({
                 <p className="text-xs text-muted-foreground mt-1">
                   Connect Google Drive to upload files
                 </p>
+              )}
+
+              {/* Google Photos picker */}
+              {photosPickerOpen && (
+                <div className="mt-2">
+                  <GooglePhotosPicker
+                    open={photosPickerOpen}
+                    onClose={() => setPhotosPickerOpen(false)}
+                    onSelect={handleGooglePhotoSelect}
+                  />
+                </div>
               )}
             </div>
           )}
@@ -532,9 +600,83 @@ export function AddMemoryDialog({
           )}
 
           {/* ===== Audio section ===== */}
-          {!isEditing && (
+          {!isEditing && !hasAnyAudio && !recorder.isRecording && (
             <div>
               <label className="text-sm font-medium mb-2 block">Audio (optional)</label>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => audioInputRef.current?.click()}
+                  className="flex-1"
+                >
+                  <Mic className="h-4 w-4 mr-2" />
+                  Choose audio file
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => recorder.start()}
+                  className="flex-1"
+                >
+                  <Circle className="h-4 w-4 mr-2 text-red-500 fill-red-500" />
+                  Record
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Recording in progress */}
+          {!isEditing && recorder.isRecording && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Recording...</label>
+              <div className="flex items-center gap-2 rounded-lg bg-red-50 dark:bg-red-950/30 p-3">
+                <div className="h-3 w-3 rounded-full bg-red-500 animate-pulse" />
+                <span className="text-sm font-mono flex-1">{formatDuration(recorder.duration)}</span>
+                {recorder.isPaused ? (
+                  <Button type="button" variant="outline" size="sm" onClick={recorder.resume}>
+                    Resume
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" onClick={recorder.pause}>
+                    Pause
+                  </Button>
+                )}
+                <Button type="button" variant="default" size="sm" onClick={recorder.stop}>
+                  <Square className="h-3 w-3 mr-1 fill-current" />
+                  Stop
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Recording done — show preview */}
+          {!isEditing && hasRecording && !recorder.isRecording && !audioFile && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Recorded audio</label>
+              <div className="flex items-center gap-2">
+                <audio
+                  controls
+                  src={URL.createObjectURL(recorder.blob!)}
+                  className="flex-1 h-8"
+                  preload="metadata"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={recorder.discard}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Audio file chosen (not recording) */}
+          {!isEditing && audioFile && (
+            <div>
+              <label className="text-sm font-medium mb-2 block">Audio file</label>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -543,21 +685,19 @@ export function AddMemoryDialog({
                   className="w-full"
                 >
                   <Mic className="h-4 w-4 mr-2" />
-                  {audioFile ? audioFile.name : "Choose audio file"}
+                  {audioFile.name}
                 </Button>
-                {audioFile && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setAudioFile(null);
-                      if (audioInputRef.current) audioInputRef.current.value = "";
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setAudioFile(null);
+                    if (audioInputRef.current) audioInputRef.current.value = "";
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           )}
@@ -691,7 +831,7 @@ export function AddMemoryDialog({
           </div>
 
           {/* Submit */}
-          <Button type="submit" className="w-full" disabled={isUploading || !babies?.length}>
+          <Button type="submit" className="w-full" disabled={isUploading || !babies?.length || recorder.isRecording}>
             {isUploading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
