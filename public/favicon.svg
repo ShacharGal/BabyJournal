@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Book body -->
+  <rect x="10" y="8" width="80" height="84" rx="8" ry="8" fill="#F4A6A0" stroke="#1a1a1a" stroke-width="4"/>
+  <!-- Book spine -->
+  <rect x="10" y="8" width="12" height="84" rx="4" ry="4" fill="#E8857E" stroke="#1a1a1a" stroke-width="4"/>
+  <!-- Photo frame on cover -->
+  <rect x="28" y="18" width="54" height="52" rx="6" ry="6" fill="#FFF8E7" stroke="#1a1a1a" stroke-width="3.5"/>
+  <!-- Baby head -->
+  <circle cx="55" cy="38" r="14" fill="#FDDBB4" stroke="#1a1a1a" stroke-width="3"/>
+  <!-- Baby hair -->
+  <path d="M46 30 Q50 22 58 26 Q62 28 61 32" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1"/>
+  <!-- Baby eyes -->
+  <ellipse cx="50" cy="37" rx="2.5" ry="2" fill="#1a1a1a"/>
+  <ellipse cx="60" cy="37" rx="2.5" ry="2" fill="#1a1a1a"/>
+  <!-- Baby body/shoulders -->
+  <ellipse cx="55" cy="62" rx="16" ry="10" fill="#C8B8D8" stroke="#1a1a1a" stroke-width="3"/>
+  <!-- Bottom lines on cover (decorative) -->
+  <rect x="33" y="76" width="18" height="5" rx="2.5" fill="#1a1a1a"/>
+  <rect x="57" y="76" width="18" height="5" rx="2.5" fill="#1a1a1a"/>
+</svg>
