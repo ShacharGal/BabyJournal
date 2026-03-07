@@ -220,10 +220,11 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
   const hasAudio = !!audioUrl;
   const hasThumbnail = !!entry.thumbnail_url;
   const isVideo = entry.type === "video";
+  const canPlayVideo = isVideo && !!entry.drive_file_id;
 
   const handleThumbnailTap = () => {
-    if (isVideo && entry.drive_file_id) {
-      onVideoTap(entry.drive_file_id);
+    if (canPlayVideo) {
+      onVideoTap(entry.drive_file_id!);
     } else if (entry.thumbnail_url) {
       onImageTap(entry.thumbnail_url);
     }
@@ -231,7 +232,7 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {/* Thumbnail image (with play overlay for videos) */}
+      {/* Thumbnail image (with play overlay for playable videos) */}
       {hasThumbnail && (
         <div
           className="relative w-full aspect-square overflow-hidden cursor-pointer"
@@ -242,7 +243,7 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
             alt={entry.description || "Memory"}
             className="w-full h-full object-cover"
           />
-          {isVideo && (
+          {canPlayVideo && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/20">
               <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
                 <Play className="h-8 w-8 text-white ml-1" fill="white" />
@@ -253,7 +254,7 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
       )}
 
       {/* Video without thumbnail (old entries) */}
-      {!hasThumbnail && isVideo && entry.drive_file_id && (
+      {!hasThumbnail && canPlayVideo && (
         <div
           className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2 cursor-pointer"
           onClick={() => onVideoTap(entry.drive_file_id!)}
