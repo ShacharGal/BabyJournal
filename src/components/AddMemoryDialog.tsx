@@ -274,18 +274,23 @@ export function AddMemoryDialog({
         let driveThumbData: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
+        console.log("[upload] conditions:", { hasFile: !!file, isConnected, folderId: selectedBaby?.drive_folder_id });
         if (file && isConnected && selectedBaby?.drive_folder_id) {
+          console.log("[upload] uploading to Drive...");
           const result = await uploadToDrive.mutateAsync({
             file,
             folderId: selectedBaby.drive_folder_id,
           });
+          console.log("[upload] Drive result:", { fileId: result.fileId, hasThumb: !!result.thumbnailData });
           driveFileId = result.fileId;
           driveThumbData = result.thumbnailData ?? undefined;
           entryType = getFileType(file.type);
         } else if (file) {
+          console.log("[upload] skipping Drive upload, creating local entry");
           entryType = getFileType(file.type);
         }
 
+        console.log("[upload] creating entry with drive_file_id:", driveFileId);
         const newEntry = await createEntry.mutateAsync({
           entry: {
             baby_id: selectedBabyId,
