@@ -143,6 +143,28 @@ Deno.serve(async (req) => {
       );
     }
 
+    // For videos, fetch the Drive-generated thumbnail and return as base64
+    // (thumbnailLink requires auth, so we fetch it server-side)
+    let thumbnailData: string | null = null;
+    if (mimeType.startsWith("video/") && uploadData.thumbnailLink) {
+      try {
+        const thumbResponse = await fetch(uploadData.thumbnailLink, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        if (thumbResponse.ok) {
+          const thumbBytes = new Uint8Array(await thumbResponse.arrayBuffer());
+          // Convert to base64
+          let binary = "";
+          for (let i = 0; i < thumbBytes.length; i++) {
+            binary += String.fromCharCode(thumbBytes[i]);
+          }
+          thumbnailData = btoa(binary);
+        }
+      } catch (e) {
+        console.warn("Failed to fetch Drive thumbnail:", e);
+      }
+    }
+
     return new Response(
       JSON.stringify({
         fileId: uploadData.id,
@@ -150,6 +172,7 @@ Deno.serve(async (req) => {
         mimeType: uploadData.mimeType,
         thumbnailUrl: uploadData.thumbnailLink,
         webViewLink: uploadData.webViewLink,
+        thumbnailData,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

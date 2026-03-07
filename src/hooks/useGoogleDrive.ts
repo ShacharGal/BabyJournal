@@ -114,10 +114,11 @@ export function useUploadToDrive() {
       });
       
       if (response.error) throw response.error;
-      return response.data as { 
-        fileId: string; 
+      return response.data as {
+        fileId: string;
         thumbnailUrl?: string;
         webViewLink?: string;
+        thumbnailData?: string;
       };
     },
   });

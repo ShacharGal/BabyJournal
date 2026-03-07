@@ -138,6 +138,24 @@ Deno.serve(async (req) => {
 
           currentParentId = createData.id;
           finalFolderId = createData.id;
+
+          // Set "anyone with the link can view" on newly created folders
+          // so videos can be played via Google Drive embed
+          try {
+            await fetch(
+              `https://www.googleapis.com/drive/v3/files/${createData.id}/permissions`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ role: "reader", type: "anyone" }),
+              }
+            );
+          } catch (e) {
+            console.warn("Failed to set folder sharing:", e);
+          }
         }
       }
 
