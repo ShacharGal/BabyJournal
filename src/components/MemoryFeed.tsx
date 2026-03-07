@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X,
+  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X, Play,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -50,6 +50,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const deleteEntry = useDeleteEntry();
   const { canEdit } = useAuthContext();
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const [videoFileId, setVideoFileId] = useState<string | null>(null);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -139,6 +140,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
             showBaby={!babyId}
             canEdit={canEdit}
             onImageTap={setLightboxUrl}
+            onVideoTap={setVideoFileId}
           />
         ))}
         <div ref={sentinelRef} className="h-1" />
@@ -170,6 +172,29 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
           />
         </div>
       )}
+
+      {videoFileId && (
+        <div
+          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+          onClick={() => setVideoFileId(null)}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+            onClick={() => setVideoFileId(null)}
+          >
+            <X className="h-6 w-6" />
+          </Button>
+          <iframe
+            src={`https://drive.google.com/file/d/${videoFileId}/preview`}
+            className="w-[95vw] max-w-3xl aspect-video rounded-lg"
+            allow="autoplay"
+            allowFullScreen
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </>
   );
 }
@@ -183,9 +208,10 @@ interface MemoryCardProps {
   showBaby: boolean;
   canEdit: boolean;
   onImageTap: (url: string) => void;
+  onVideoTap: (driveFileId: string) => void;
 }
 
-function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit, onImageTap }: MemoryCardProps) {
+function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit, onImageTap, onVideoTap }: MemoryCardProps) {
   const [expanded, setExpanded] = useState(false);
   const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
   const descriptionLong = (entry.description?.length ?? 0) > 200;
@@ -193,25 +219,54 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
   const audioFileName = (entry as any).audio_file_name as string | null;
   const hasAudio = !!audioUrl;
   const hasThumbnail = !!entry.thumbnail_url;
+  const isVideo = entry.type === "video";
+
+  const handleThumbnailTap = () => {
+    if (isVideo && entry.drive_file_id) {
+      onVideoTap(entry.drive_file_id);
+    } else if (entry.thumbnail_url) {
+      onImageTap(entry.thumbnail_url);
+    }
+  };
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {/* Thumbnail image */}
+      {/* Thumbnail image (with play overlay for videos) */}
       {hasThumbnail && (
         <div
-          className="w-full aspect-square overflow-hidden cursor-pointer"
-          onClick={() => onImageTap(entry.thumbnail_url!)}
+          className="relative w-full aspect-square overflow-hidden cursor-pointer"
+          onClick={handleThumbnailTap}
         >
           <img
             src={entry.thumbnail_url}
             alt={entry.description || "Memory"}
             className="w-full h-full object-cover"
           />
+          {isVideo && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
+                <Play className="h-8 w-8 text-white ml-1" fill="white" />
+              </div>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Audio-only banner (no photo) */}
-      {!hasThumbnail && hasAudio && (
+      {/* Video without thumbnail (old entries) */}
+      {!hasThumbnail && isVideo && entry.drive_file_id && (
+        <div
+          className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2 cursor-pointer"
+          onClick={() => onVideoTap(entry.drive_file_id!)}
+        >
+          <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+            <Play className="h-7 w-7 text-primary ml-0.5" fill="currentColor" />
+          </div>
+          <span className="text-xs text-muted-foreground">Tap to play video</span>
+        </div>
+      )}
+
+      {/* Audio-only banner (no photo/video) */}
+      {!hasThumbnail && !isVideo && hasAudio && (
         <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2">
           <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
             <Mic className="h-7 w-7 text-primary" />

@@ -23,7 +23,7 @@ import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, ImagePlus, Paperclip } from "lucide-react";
-import { generateAndUploadThumbnail, deleteThumbnail } from "@/lib/thumbnails";
+import { generateAndUploadThumbnail, deleteThumbnail, uploadBase64Thumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { extractDateFromFile } from "@/lib/exifDate";
@@ -220,12 +220,14 @@ export function AddMemoryDialog({
 
         if (wantsNewFile) {
           let driveFileId: string | undefined;
+          let driveThumbData: string | undefined;
           if (isConnected && selectedBaby?.drive_folder_id) {
             const result = await uploadToDrive.mutateAsync({
               file,
               folderId: selectedBaby.drive_folder_id,
             });
             driveFileId = result.fileId;
+            driveThumbData = result.thumbnailData ?? undefined;
           }
 
           entryUpdate.type = getFileType(file.type);
@@ -236,11 +238,19 @@ export function AddMemoryDialog({
 
           await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: selectedTags });
 
+          let thumbUrl: string | null = null;
           if (file.type.startsWith("image/")) {
-            const thumbUrl = await generateAndUploadThumbnail(file, editEntry.id);
-            if (thumbUrl) {
-              await updateEntry.mutateAsync({ entryId: editEntry.id, entry: { thumbnail_url: thumbUrl } });
+            thumbUrl = await generateAndUploadThumbnail(file, editEntry.id);
+          } else if (file.type.startsWith("video/")) {
+            if (driveThumbData) {
+              thumbUrl = await uploadBase64Thumbnail(driveThumbData, editEntry.id);
             }
+            if (!thumbUrl) {
+              thumbUrl = await generateVideoThumbnail(file, editEntry.id);
+            }
+          }
+          if (thumbUrl) {
+            await updateEntry.mutateAsync({ entryId: editEntry.id, entry: { thumbnail_url: thumbUrl } });
           }
         } else if (wantsRemoveFile) {
           entryUpdate.type = "text";
@@ -261,6 +271,7 @@ export function AddMemoryDialog({
       } else {
         // Create new entry
         let driveFileId: string | undefined;
+        let driveThumbData: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
         if (file && isConnected && selectedBaby?.drive_folder_id) {
@@ -269,6 +280,7 @@ export function AddMemoryDialog({
             folderId: selectedBaby.drive_folder_id,
           });
           driveFileId = result.fileId;
+          driveThumbData = result.thumbnailData ?? undefined;
           entryType = getFileType(file.type);
         } else if (file) {
           entryType = getFileType(file.type);
@@ -289,9 +301,22 @@ export function AddMemoryDialog({
           tagIds: selectedTags,
         });
 
-        // Generate and upload thumbnail for images
-        if (file && file.type.startsWith("image/") && newEntry?.id) {
-          const thumbUrl = await generateAndUploadThumbnail(file, newEntry.id);
+        // Generate and upload thumbnail
+        if (file && newEntry?.id) {
+          let thumbUrl: string | null = null;
+
+          if (file.type.startsWith("image/")) {
+            thumbUrl = await generateAndUploadThumbnail(file, newEntry.id);
+          } else if (file.type.startsWith("video/")) {
+            // Try Drive-generated thumbnail first, fall back to client-side capture
+            if (driveThumbData) {
+              thumbUrl = await uploadBase64Thumbnail(driveThumbData, newEntry.id);
+            }
+            if (!thumbUrl) {
+              thumbUrl = await generateVideoThumbnail(file, newEntry.id);
+            }
+          }
+
           if (thumbUrl) {
             await updateEntry.mutateAsync({
               entryId: newEntry.id,
