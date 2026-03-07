@@ -24,10 +24,21 @@ fi
 
 echo "Found branch: $BRANCH"
 
-# 2. Pull latest changes
+# 2. Ensure branch is up to date with main (prevents merge conflicts)
 echo ""
-echo "=== Step 2: Pulling latest changes ==="
-git pull origin "$BRANCH"
+echo "=== Step 2: Syncing with main ==="
+git fetch origin main
+git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+git pull origin "$BRANCH" --rebase 2>/dev/null || true
+
+# Rebase onto latest main to avoid merge conflicts
+if ! git rebase origin/main; then
+  echo "ERROR: Rebase conflict. Run 'git rebase --abort' and resolve manually."
+  exit 1
+fi
+
+# Force-push the rebased branch
+git push origin "$BRANCH" --force-with-lease
 
 # 3. Deploy Supabase edge functions (if any exist)
 echo ""

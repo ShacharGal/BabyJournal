@@ -22,7 +22,7 @@ import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hoo
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, ImagePlus } from "lucide-react";
+import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, ImagePlus, Paperclip } from "lucide-react";
 import { generateAndUploadThumbnail, deleteThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -607,20 +607,20 @@ export function AddMemoryDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => audioInputRef.current?.click()}
-                  className="flex-1"
-                >
-                  <Mic className="h-4 w-4 mr-2" />
-                  Choose audio file
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
                   onClick={() => recorder.start()}
                   className="flex-1"
                 >
                   <Circle className="h-4 w-4 mr-2 text-red-500 fill-red-500" />
                   Record
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  onClick={() => audioInputRef.current?.click()}
+                  title="Attach audio file"
+                >
+                  <Paperclip className="h-4 w-4" />
                 </Button>
               </div>
             </div>
