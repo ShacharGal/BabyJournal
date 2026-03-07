@@ -274,23 +274,26 @@ export function AddMemoryDialog({
         let driveThumbData: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
-        console.log("[upload] conditions:", { hasFile: !!file, isConnected, folderId: selectedBaby?.drive_folder_id });
+        alert(`[1] conditions: file=${!!file}, connected=${isConnected}, folder=${selectedBaby?.drive_folder_id ?? "NULL"}`);
         if (file && isConnected && selectedBaby?.drive_folder_id) {
-          console.log("[upload] uploading to Drive...");
-          const result = await uploadToDrive.mutateAsync({
-            file,
-            folderId: selectedBaby.drive_folder_id,
-          });
-          console.log("[upload] Drive result:", { fileId: result.fileId, hasThumb: !!result.thumbnailData });
-          driveFileId = result.fileId;
-          driveThumbData = result.thumbnailData ?? undefined;
+          try {
+            const result = await uploadToDrive.mutateAsync({
+              file,
+              folderId: selectedBaby.drive_folder_id,
+            });
+            alert(`[2] Drive OK: fileId=${result.fileId}, thumb=${!!result.thumbnailData}`);
+            driveFileId = result.fileId;
+            driveThumbData = result.thumbnailData ?? undefined;
+          } catch (driveErr: any) {
+            alert(`[2] Drive FAILED: ${driveErr?.message || driveErr}`);
+          }
           entryType = getFileType(file.type);
         } else if (file) {
-          console.log("[upload] skipping Drive upload, creating local entry");
+          alert("[2] SKIPPED Drive upload");
           entryType = getFileType(file.type);
         }
 
-        console.log("[upload] creating entry with drive_file_id:", driveFileId);
+        alert(`[3] creating entry, drive_file_id=${driveFileId ?? "undefined"}`);
         const newEntry = await createEntry.mutateAsync({
           entry: {
             baby_id: selectedBabyId,
