@@ -274,17 +274,27 @@ export function AddMemoryDialog({
         let driveThumbData: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
+        console.log("[AddMemory] file:", !!file, "connected:", isConnected, "folder:", selectedBaby?.drive_folder_id ?? "NONE");
         if (file && isConnected && selectedBaby?.drive_folder_id) {
-          const result = await uploadToDrive.mutateAsync({
-            file,
-            folderId: selectedBaby.drive_folder_id,
-          });
-          driveFileId = result.fileId;
-          driveThumbData = result.thumbnailData ?? undefined;
+          try {
+            const result = await uploadToDrive.mutateAsync({
+              file,
+              folderId: selectedBaby.drive_folder_id,
+            });
+            driveFileId = result.fileId;
+            driveThumbData = result.thumbnailData ?? undefined;
+            console.log("[AddMemory] Drive upload OK, fileId:", driveFileId);
+          } catch (uploadErr: any) {
+            console.error("[AddMemory] Drive upload FAILED:", uploadErr);
+            // Continue — save the entry without drive_file_id
+            toast({ title: "Drive upload failed", description: uploadErr?.message || String(uploadErr), variant: "destructive" });
+          }
           entryType = getFileType(file.type);
         } else if (file) {
+          console.log("[AddMemory] Skipping Drive upload (not connected or no folder)");
           entryType = getFileType(file.type);
         }
+        console.log("[AddMemory] Creating entry with drive_file_id:", driveFileId ?? "none");
         const newEntry = await createEntry.mutateAsync({
           entry: {
             baby_id: selectedBabyId,
