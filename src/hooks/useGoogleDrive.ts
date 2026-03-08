@@ -82,6 +82,46 @@ export function useCreateDriveFolder() {
   });
 }
 
+/** Get a valid (non-expired) Google access token, refreshing via edge function if needed */
+async function getValidAccessToken(): Promise<string> {
+  const { data, error } = await supabase
+    .from("google_tokens")
+    .select("*")
+    .limit(1)
+    .single();
+
+  if (error || !data) throw new Error("No Google token found");
+
+  const expiresAt = new Date(data.expires_at);
+  const bufferMs = 5 * 60 * 1000;
+
+  if (expiresAt.getTime() - Date.now() > bufferMs) {
+    // Token is still valid
+    return data.access_token;
+  }
+
+  // Token expired — ask edge function to refresh it (this endpoint already exists)
+  const response = await supabase.functions.invoke("drive-upload", {
+    body: {
+      // Trigger a dummy call that forces token refresh; we'll read the updated token after
+      fileName: "__token_refresh__",
+      mimeType: "text/plain",
+      fileContent: "dGVzdA==", // "test" in base64
+      folderId: "root",
+    },
+  });
+
+  // Whether it succeeded or failed, re-read the token (refresh happens as side effect)
+  const { data: refreshed } = await supabase
+    .from("google_tokens")
+    .select("access_token")
+    .limit(1)
+    .single();
+
+  if (!refreshed) throw new Error("Failed to refresh Google token");
+  return refreshed.access_token;
+}
+
 export function useUploadToDrive() {
   return useMutation({
     mutationFn: async ({
@@ -93,25 +133,39 @@ export function useUploadToDrive() {
       folderId: string;
       onProgress?: (progress: number) => void;
     }) => {
-      // Step 1: Ask edge function to init a resumable upload session
-      const initResponse = await supabase.functions.invoke("drive-upload", {
-        body: {
-          action: "init-resumable",
-          fileName: file.name,
-          mimeType: file.type,
-          folderId,
-        },
+      const accessToken = await getValidAccessToken();
+
+      // Step 1: Init resumable upload session directly with Google Drive API
+      const metadata = JSON.stringify({
+        name: file.name,
+        parents: [folderId],
       });
 
-      if (initResponse.error) throw initResponse.error;
-      const { uploadUri } = initResponse.data as { uploadUri: string; accessToken: string };
+      const initResponse = await fetch(
+        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,thumbnailLink,webViewLink",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json; charset=UTF-8",
+            "X-Upload-Content-Type": file.type,
+            "X-Upload-Content-Length": String(file.size),
+          },
+          body: metadata,
+        }
+      );
 
-      if (!uploadUri) {
-        throw new Error("Failed to get upload URI from server");
+      if (!initResponse.ok) {
+        const errText = await initResponse.text();
+        throw new Error(`Failed to init upload: ${errText}`);
       }
 
-      // Step 2: Upload the file directly to Google Drive using the resumable URI
-      // This bypasses the Supabase body size limit entirely
+      const uploadUri = initResponse.headers.get("Location");
+      if (!uploadUri) {
+        throw new Error("No upload URI returned from Google");
+      }
+
+      // Step 2: Upload file directly to Google Drive
       const uploadResponse = await fetch(uploadUri, {
         method: "PUT",
         headers: {
@@ -128,22 +182,48 @@ export function useUploadToDrive() {
 
       const uploadData = await uploadResponse.json();
 
-      // Step 3: Finalize — set permissions and fetch thumbnail
-      const finalizeResponse = await supabase.functions.invoke("drive-upload", {
-        body: {
-          action: "finalize",
-          fileId: uploadData.id,
-          mimeType: file.type,
-        },
-      });
+      // Step 3: Make file publicly viewable (needed for video preview iframe)
+      try {
+        await fetch(
+          `https://www.googleapis.com/drive/v3/files/${uploadData.id}/permissions`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ role: "reader", type: "anyone" }),
+          }
+        );
+      } catch (e) {
+        console.warn("Failed to set file permissions:", e);
+      }
 
-      const finalizeData = finalizeResponse.data as { thumbnailData?: string } | null;
+      // Step 4: For videos, try to fetch Drive-generated thumbnail
+      let thumbnailData: string | undefined;
+      if (file.type.startsWith("video/") && uploadData.thumbnailLink) {
+        try {
+          const thumbResponse = await fetch(uploadData.thumbnailLink, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (thumbResponse.ok) {
+            const blob = await thumbResponse.blob();
+            thumbnailData = await new Promise<string>((resolve) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve((reader.result as string).split(",")[1]);
+              reader.readAsDataURL(blob);
+            });
+          }
+        } catch (e) {
+          console.warn("Failed to fetch Drive thumbnail:", e);
+        }
+      }
 
       return {
         fileId: uploadData.id as string,
         thumbnailUrl: uploadData.thumbnailLink as string | undefined,
         webViewLink: uploadData.webViewLink as string | undefined,
-        thumbnailData: finalizeData?.thumbnailData ?? undefined,
+        thumbnailData,
       };
     },
   });
