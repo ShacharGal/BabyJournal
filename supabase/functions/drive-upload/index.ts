@@ -74,19 +74,29 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { fileName, mimeType, fileContent, folderId } = await req.json();
-    
+    const body = await req.json();
+
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+
+    // Action: return a valid access token (bypasses RLS)
+    if (body.action === "get-token") {
+      const accessToken = await getValidAccessToken(supabase);
+      return new Response(
+        JSON.stringify({ accessToken }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { fileName, mimeType, fileContent, folderId } = body;
+
     if (!fileName || !mimeType || !fileContent || !folderId) {
       return new Response(
         JSON.stringify({ error: "fileName, mimeType, fileContent, and folderId are required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
     const accessToken = await getValidAccessToken(supabase);
 
     // Convert base64 to Uint8Array
