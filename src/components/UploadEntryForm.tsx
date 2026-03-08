@@ -88,7 +88,7 @@ export function UploadEntryForm() {
       let entryType: "photo" | "video" | "audio" | "text" = "text";
 
       // Upload file to Google Drive if available
-      if (file && isConnected && selectedBaby?.drive_folder_id) {
+      if (file && selectedBaby?.drive_folder_id) {
         const result = await uploadToDrive.mutateAsync({
           file,
           folderId: selectedBaby.drive_folder_id,
