@@ -34,6 +34,7 @@ async function getValidAccessToken(supabase: SupabaseClient): Promise<string> {
   const bufferMs = 5 * 60 * 1000;
 
   if (expiresAt.getTime() - now.getTime() < bufferMs) {
+    // Refresh the token
     const refreshResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -51,6 +52,7 @@ async function getValidAccessToken(supabase: SupabaseClient): Promise<string> {
       throw new Error("Failed to refresh token: " + refreshData.error);
     }
 
+    // Update stored token
     const newExpiresAt = new Date(Date.now() + refreshData.expires_in * 1000).toISOString();
     await supabase
       .from("google_tokens")
@@ -66,142 +68,14 @@ async function getValidAccessToken(supabase: SupabaseClient): Promise<string> {
   return tokenRow.access_token;
 }
 
-// Make a file viewable by anyone with the link (needed for video preview)
-async function makeFilePublic(fileId: string, accessToken: string) {
-  await fetch(
-    `https://www.googleapis.com/drive/v3/files/${fileId}/permissions`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        role: "reader",
-        type: "anyone",
-      }),
-    }
-  );
-}
-
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const body = await req.json();
-    const { action } = body;
-
-    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
-    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
-    const accessToken = await getValidAccessToken(supabase);
-
-    // === Resumable upload: step 1 — init session, return upload URI ===
-    if (action === "init-resumable") {
-      const { fileName, mimeType, folderId } = body;
-
-      if (!fileName || !mimeType || !folderId) {
-        return new Response(
-          JSON.stringify({ error: "fileName, mimeType, and folderId are required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const metadata = JSON.stringify({
-        name: fileName,
-        parents: [folderId],
-      });
-
-      const initResponse = await fetch(
-        "https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&fields=id,name,mimeType,thumbnailLink,webViewLink",
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            "Content-Type": "application/json; charset=UTF-8",
-            "X-Upload-Content-Type": mimeType,
-          },
-          body: metadata,
-        }
-      );
-
-      if (!initResponse.ok) {
-        const errText = await initResponse.text();
-        return new Response(
-          JSON.stringify({ error: `Failed to init resumable upload: ${errText}` }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const uploadUri = initResponse.headers.get("Location");
-      if (!uploadUri) {
-        return new Response(
-          JSON.stringify({ error: "No upload URI returned from Google" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({ uploadUri, accessToken }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // === Resumable upload: step 2 — finalize (set permissions, fetch thumbnail) ===
-    if (action === "finalize") {
-      const { fileId, mimeType: finalMimeType } = body;
-
-      if (!fileId) {
-        return new Response(
-          JSON.stringify({ error: "fileId is required" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Make file publicly viewable (for video preview iframe)
-      await makeFilePublic(fileId, accessToken);
-
-      // For videos, try to fetch Drive-generated thumbnail
-      let thumbnailData: string | null = null;
-      if (finalMimeType?.startsWith("video/")) {
-        // Fetch file metadata to get thumbnailLink
-        const metaResponse = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${fileId}?fields=thumbnailLink`,
-          { headers: { Authorization: `Bearer ${accessToken}` } }
-        );
-        if (metaResponse.ok) {
-          const meta = await metaResponse.json();
-          if (meta.thumbnailLink) {
-            try {
-              const thumbResponse = await fetch(meta.thumbnailLink, {
-                headers: { Authorization: `Bearer ${accessToken}` },
-              });
-              if (thumbResponse.ok) {
-                const thumbBytes = new Uint8Array(await thumbResponse.arrayBuffer());
-                let binary = "";
-                for (let i = 0; i < thumbBytes.length; i++) {
-                  binary += String.fromCharCode(thumbBytes[i]);
-                }
-                thumbnailData = btoa(binary);
-              }
-            } catch (e) {
-              console.warn("Failed to fetch Drive thumbnail:", e);
-            }
-          }
-        }
-      }
-
-      return new Response(
-        JSON.stringify({ ok: true, thumbnailData }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    // === Legacy: small-file multipart upload (kept for backward compat) ===
-    const { fileName, mimeType, fileContent, folderId } = body;
-
+    const { fileName, mimeType, fileContent, folderId } = await req.json();
+    
     if (!fileName || !mimeType || !fileContent || !folderId) {
       return new Response(
         JSON.stringify({ error: "fileName, mimeType, fileContent, and folderId are required" }),
@@ -209,15 +83,24 @@ Deno.serve(async (req) => {
       );
     }
 
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+    const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    
+    const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
+    const accessToken = await getValidAccessToken(supabase);
+
     // Convert base64 to Uint8Array
     const binaryContent = Uint8Array.from(atob(fileContent), c => c.charCodeAt(0));
 
+    // Create multipart form data for file upload
     const boundary = "-------" + Date.now().toString(16);
+    
     const metadata = JSON.stringify({
       name: fileName,
       parents: [folderId],
     });
 
+    // Build multipart body
     const encoder = new TextEncoder();
     const parts = [
       encoder.encode(`--${boundary}\r\n`),
@@ -229,14 +112,16 @@ Deno.serve(async (req) => {
       encoder.encode(`\r\n--${boundary}--`),
     ];
 
+    // Combine all parts
     const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
-    const uploadBody = new Uint8Array(totalLength);
+    const body = new Uint8Array(totalLength);
     let offset = 0;
     for (const part of parts) {
-      uploadBody.set(part, offset);
+      body.set(part, offset);
       offset += part.length;
     }
 
+    // Upload file
     const uploadResponse = await fetch(
       "https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,thumbnailLink,webViewLink",
       {
@@ -245,7 +130,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": `multipart/related; boundary=${boundary}`,
         },
-        body: uploadBody,
+        body: body,
       }
     );
 
@@ -258,10 +143,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Make file publicly viewable
-    await makeFilePublic(uploadData.id, accessToken);
-
-    // For videos, fetch the Drive-generated thumbnail
+    // For videos, fetch the Drive-generated thumbnail and return as base64
+    // (thumbnailLink requires auth, so we fetch it server-side)
     let thumbnailData: string | null = null;
     if (mimeType.startsWith("video/") && uploadData.thumbnailLink) {
       try {
@@ -270,6 +153,7 @@ Deno.serve(async (req) => {
         });
         if (thumbResponse.ok) {
           const thumbBytes = new Uint8Array(await thumbResponse.arrayBuffer());
+          // Convert to base64
           let binary = "";
           for (let i = 0; i < thumbBytes.length; i++) {
             binary += String.fromCharCode(thumbBytes[i]);
