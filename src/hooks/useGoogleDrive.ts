@@ -82,53 +82,26 @@ export function useCreateDriveFolder() {
   });
 }
 
-/** Get a valid (non-expired) Google access token, refreshing via edge function if needed */
+/** Get a valid access token via the edge function (bypasses RLS) */
 async function getValidAccessToken(): Promise<string> {
-  console.log("[DriveUpload] Getting access token...");
-  const { data, error } = await supabase
-    .from("google_tokens")
-    .select("*")
-    .limit(1)
-    .single();
-
-  if (error || !data) {
-    console.error("[DriveUpload] No Google token found:", error);
-    throw new Error("No Google token found");
-  }
-
-  const expiresAt = new Date(data.expires_at);
-  const bufferMs = 5 * 60 * 1000;
-  const timeLeft = expiresAt.getTime() - Date.now();
-  console.log("[DriveUpload] Token expires in", Math.round(timeLeft / 1000), "seconds");
-
-  if (timeLeft > bufferMs) {
-    console.log("[DriveUpload] Token is valid, using existing token");
-    return data.access_token;
-  }
-
-  // Token expired — ask edge function to refresh it (this endpoint already exists)
-  console.log("[DriveUpload] Token expired, refreshing via edge function...");
+  console.log("[DriveUpload] Getting access token via edge function...");
   const response = await supabase.functions.invoke("drive-upload", {
-    body: {
-      // Trigger a dummy call that forces token refresh; we'll read the updated token after
-      fileName: "__token_refresh__",
-      mimeType: "text/plain",
-      fileContent: "dGVzdA==", // "test" in base64
-      folderId: "root",
-    },
+    body: { action: "get-token" },
   });
-  console.log("[DriveUpload] Refresh response:", response.error ? `ERROR: ${response.error}` : "OK");
 
-  // Whether it succeeded or failed, re-read the token (refresh happens as side effect)
-  const { data: refreshed } = await supabase
-    .from("google_tokens")
-    .select("access_token")
-    .limit(1)
-    .single();
+  if (response.error) {
+    console.error("[DriveUpload] get-token error:", response.error);
+    throw new Error("Failed to get Google token: " + response.error.message);
+  }
 
-  if (!refreshed) throw new Error("Failed to refresh Google token");
-  console.log("[DriveUpload] Got refreshed token");
-  return refreshed.access_token;
+  const { accessToken } = response.data as { accessToken: string };
+  if (!accessToken) {
+    console.error("[DriveUpload] No accessToken in response:", response.data);
+    throw new Error("No access token returned from server");
+  }
+
+  console.log("[DriveUpload] Got access token");
+  return accessToken;
 }
 
 export function useUploadToDrive() {
