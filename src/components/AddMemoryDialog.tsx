@@ -274,26 +274,17 @@ export function AddMemoryDialog({
         let driveThumbData: string | undefined;
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
-        alert(`[1] conditions: file=${!!file}, connected=${isConnected}, folder=${selectedBaby?.drive_folder_id ?? "NULL"}`);
         if (file && isConnected && selectedBaby?.drive_folder_id) {
-          try {
-            const result = await uploadToDrive.mutateAsync({
-              file,
-              folderId: selectedBaby.drive_folder_id,
-            });
-            alert(`[2] Drive OK: fileId=${result.fileId}, thumb=${!!result.thumbnailData}`);
-            driveFileId = result.fileId;
-            driveThumbData = result.thumbnailData ?? undefined;
-          } catch (driveErr: any) {
-            alert(`[2] Drive FAILED: ${driveErr?.message || driveErr}`);
-          }
+          const result = await uploadToDrive.mutateAsync({
+            file,
+            folderId: selectedBaby.drive_folder_id,
+          });
+          driveFileId = result.fileId;
+          driveThumbData = result.thumbnailData ?? undefined;
           entryType = getFileType(file.type);
         } else if (file) {
-          alert("[2] SKIPPED Drive upload");
           entryType = getFileType(file.type);
         }
-
-        alert(`[3] creating entry, drive_file_id=${driveFileId ?? "undefined"}`);
         const newEntry = await createEntry.mutateAsync({
           entry: {
             baby_id: selectedBabyId,
