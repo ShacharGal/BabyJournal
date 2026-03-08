@@ -221,7 +221,7 @@ export function AddMemoryDialog({
         if (wantsNewFile) {
           let driveFileId: string | undefined;
           let driveThumbData: string | undefined;
-          if (isConnected && selectedBaby?.drive_folder_id) {
+          if (selectedBaby?.drive_folder_id) {
             const result = await uploadToDrive.mutateAsync({
               file,
               folderId: selectedBaby.drive_folder_id,
@@ -275,7 +275,7 @@ export function AddMemoryDialog({
         let entryType: "photo" | "video" | "audio" | "text" = "text";
 
         console.log("[AddMemory] file:", !!file, "connected:", isConnected, "folder:", selectedBaby?.drive_folder_id ?? "NONE");
-        if (file && isConnected && selectedBaby?.drive_folder_id) {
+        if (file && selectedBaby?.drive_folder_id) {
           try {
             const result = await uploadToDrive.mutateAsync({
               file,
