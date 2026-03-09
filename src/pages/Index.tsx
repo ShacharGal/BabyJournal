@@ -10,7 +10,7 @@ import type { Filters } from "@/components/SearchFilters";
 
 const Index = () => {
   const [selectedBabyId, setSelectedBabyId] = useState<string | undefined>(undefined);
-  const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "" });
+  const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "", entryType: "", postType: "", contributorId: "" });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
   const { canAdd } = useAuthContext();

@@ -73,7 +73,8 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
       const s = filters.text.toLowerCase();
       const matchesText =
         entry.description?.toLowerCase().includes(s) ||
-        entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s));
+        entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s)) ||
+        entry.created_by_nickname?.toLowerCase().includes(s);
       if (!matchesText) return false;
     }
     if (filters.tagIds.length > 0) {
@@ -82,6 +83,9 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     }
     if (filters.dateFrom && entry.date < filters.dateFrom) return false;
     if (filters.dateTo && entry.date > filters.dateTo) return false;
+    if (filters.entryType && entry.type !== filters.entryType) return false;
+    if (filters.postType && (entry as any).post_type !== filters.postType) return false;
+    if (filters.contributorId && entry.created_by !== filters.contributorId) return false;
     return true;
   });
 

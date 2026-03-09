@@ -1,14 +1,25 @@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useTags } from "@/hooks/useTags";
 import { Search, X } from "lucide-react";
+import { useEntryContributors } from "@/hooks/useEntries";
 
 export interface Filters {
   text: string;
   tagIds: string[];
   dateFrom: string;
   dateTo: string;
+  entryType: string;
+  postType: string;
+  contributorId: string;
 }
 
 interface SearchFiltersProps {
@@ -18,6 +29,7 @@ interface SearchFiltersProps {
 
 export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
   const { data: tags } = useTags();
+  const { data: contributors } = useEntryContributors();
 
   const update = (partial: Partial<Filters>) =>
     onChange({ ...filters, ...partial });
@@ -30,10 +42,23 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
   };
 
   const hasActiveFilters =
-    filters.tagIds.length > 0 || filters.dateFrom || filters.dateTo;
+    filters.tagIds.length > 0 ||
+    filters.dateFrom ||
+    filters.dateTo ||
+    filters.entryType ||
+    filters.postType ||
+    filters.contributorId;
 
   const clearAll = () =>
-    onChange({ text: "", tagIds: [], dateFrom: "", dateTo: "" });
+    onChange({
+      text: "",
+      tagIds: [],
+      dateFrom: "",
+      dateTo: "",
+      entryType: "",
+      postType: "",
+      contributorId: "",
+    });
 
   return (
     <div className="space-y-3">
@@ -41,13 +66,66 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="חיפוש זיכרונות..."
+          placeholder="Search memories..."
           value={filters.text}
           onChange={(e) => update({ text: e.target.value })}
           className="pl-9"
           autoFocus
         />
       </div>
+
+      {/* Type filters row */}
+      <div className="flex gap-2">
+        <Select
+          value={filters.entryType || "_all"}
+          onValueChange={(v) => update({ entryType: v === "_all" ? "" : v })}
+        >
+          <SelectTrigger className="h-8 text-xs flex-1">
+            <SelectValue placeholder="Media type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All types</SelectItem>
+            <SelectItem value="photo">Photo</SelectItem>
+            <SelectItem value="video">Video</SelectItem>
+            <SelectItem value="audio">Audio</SelectItem>
+            <SelectItem value="text">Text only</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={filters.postType || "_all"}
+          onValueChange={(v) => update({ postType: v === "_all" ? "" : v })}
+        >
+          <SelectTrigger className="h-8 text-xs flex-1">
+            <SelectValue placeholder="Entry style" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All styles</SelectItem>
+            <SelectItem value="standard">Standard</SelectItem>
+            <SelectItem value="dialogue">Dialogue / Quote</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Contributor filter */}
+      {contributors && contributors.length > 1 && (
+        <Select
+          value={filters.contributorId || "_all"}
+          onValueChange={(v) => update({ contributorId: v === "_all" ? "" : v })}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Added by" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All contributors</SelectItem>
+            {contributors.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.nickname}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Tag filters */}
       {tags && tags.length > 0 && (
@@ -82,7 +160,7 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
           onChange={(e) => update({ dateFrom: e.target.value })}
           className="text-xs h-8"
         />
-        <span className="text-xs text-muted-foreground shrink-0">→</span>
+        <span className="text-xs text-muted-foreground shrink-0">&rarr;</span>
         <Input
           type="date"
           placeholder="To"

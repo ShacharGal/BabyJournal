@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 import { useDeleteFromDrive } from "@/hooks/useGoogleDrive";
@@ -212,6 +212,19 @@ export function useDeleteEntry() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
+    },
+  });
+}
+
+export function useEntryContributors() {
+  return useQuery({
+    queryKey: ["entry-contributors"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_users_public" as any)
+        .select("id, nickname");
+      if (error) throw error;
+      return (data ?? []) as { id: string; nickname: string }[];
     },
   });
 }
