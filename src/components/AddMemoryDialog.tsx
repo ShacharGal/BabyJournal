@@ -22,11 +22,12 @@ import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hoo
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip, Quote } from "lucide-react";
+import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip, Quote, Plus } from "lucide-react";
 import { generateAndUploadThumbnail, deleteThumbnail, uploadBase64Thumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { extractDateFromFile } from "@/lib/exifDate";
+import { supabase } from "@/integrations/supabase/client";
 
 const typeIcons = {
   photo: Image,
@@ -56,12 +57,15 @@ export function AddMemoryDialog({
 }: AddMemoryDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const secondaryInputRef = useRef<HTMLInputElement>(null);
   const [selectedBabyId, setSelectedBabyId] = useState<string>("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [postType, setPostType] = useState<"standard" | "dialogue">("standard");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
+  const [secondaryFiles, setSecondaryFiles] = useState<File[]>([]);
+  const [removeSecondaryIds, setRemoveSecondaryIds] = useState<string[]>([]);
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [removeExistingAudio, setRemoveExistingAudio] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -91,6 +95,8 @@ export function AddMemoryDialog({
       setPostType(((editEntry as any).post_type as "standard" | "dialogue") || "standard");
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
+      setSecondaryFiles([]);
+      setRemoveSecondaryIds([]);
       setAudioFile(null);
       setRemoveExistingFile(false);
       setRemoveExistingAudio(false);
@@ -139,6 +145,8 @@ export function AddMemoryDialog({
   const resetForm = () => {
     setDescription("");
     setFile(null);
+    setSecondaryFiles([]);
+    setRemoveSecondaryIds([]);
     setAudioFile(null);
     setSelectedTags([]);
     setPostType("standard");
@@ -147,6 +155,7 @@ export function AddMemoryDialog({
     setDate(new Date().toISOString().split("T")[0]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
+    if (secondaryInputRef.current) secondaryInputRef.current.value = "";
     recorder.discard();
   };
 
@@ -256,6 +265,9 @@ export function AddMemoryDialog({
         // Handle audio changes in edit mode
         await handleAudioUpdate(editEntry.id, editEntry, effectiveAudio);
 
+        // Handle secondary images in edit mode
+        await handleSecondaryImagesUpdate(editEntry.id, editEntry);
+
         toast({ title: "Memory updated!", description: "Your changes have been saved." });
       } else {
         // Create new entry
@@ -338,6 +350,11 @@ export function AddMemoryDialog({
           });
         }
 
+        // Upload secondary images
+        if (secondaryFiles.length > 0 && newEntry?.id) {
+          await uploadSecondaryImages(newEntry.id, secondaryFiles);
+        }
+
         toast({
           title: "Memory saved!",
           description: driveFileId
@@ -394,6 +411,87 @@ export function AddMemoryDialog({
         } as any,
       });
     }
+  };
+
+  const uploadSecondaryImages = async (entryId: string, files: File[]) => {
+    for (let i = 0; i < files.length; i++) {
+      const f = files[i];
+      console.log("[AddMemory] Uploading secondary image:", f.name);
+      let driveFileId: string | undefined;
+      if (selectedBaby?.drive_folder_id) {
+        try {
+          const result = await uploadToDrive.mutateAsync({
+            file: f,
+            folderId: selectedBaby.drive_folder_id,
+          });
+          driveFileId = result.fileId;
+        } catch (e) {
+          console.warn("[AddMemory] Secondary Drive upload failed:", e);
+        }
+      }
+      const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${i}`);
+      await supabase.from("entry_images").insert({
+        entry_id: entryId,
+        drive_file_id: driveFileId || null,
+        thumbnail_url: thumbUrl,
+        file_name: f.name,
+        sort_order: i,
+      });
+    }
+  };
+
+  const handleSecondaryImagesUpdate = async (entryId: string, entry: EntryWithTags) => {
+    // Remove marked images
+    if (removeSecondaryIds.length > 0) {
+      for (const imgId of removeSecondaryIds) {
+        const img = entry.entry_images?.find((ei) => ei.id === imgId);
+        if (img?.drive_file_id) {
+          try { await deleteFromDrive.mutateAsync(img.drive_file_id); } catch (e) { console.warn(e); }
+        }
+        if (img?.thumbnail_url) {
+          try { await deleteThumbnail(`${entryId}-secondary-${img.sort_order}`); } catch (e) { console.warn(e); }
+        }
+        await supabase.from("entry_images").delete().eq("id", imgId);
+      }
+    }
+    // Add new secondary images
+    if (secondaryFiles.length > 0) {
+      const existingCount = (entry.entry_images?.length ?? 0) - removeSecondaryIds.length;
+      const filesToUpload = secondaryFiles.slice(0, 4 - existingCount);
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const f = filesToUpload[i];
+        let driveFileId: string | undefined;
+        if (selectedBaby?.drive_folder_id) {
+          try {
+            const result = await uploadToDrive.mutateAsync({ file: f, folderId: selectedBaby.drive_folder_id });
+            driveFileId = result.fileId;
+          } catch (e) { console.warn(e); }
+        }
+        const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${existingCount + i}`);
+        await supabase.from("entry_images").insert({
+          entry_id: entryId,
+          drive_file_id: driveFileId || null,
+          thumbnail_url: thumbUrl,
+          file_name: f.name,
+          sort_order: existingCount + i,
+        });
+      }
+    }
+  };
+
+  const handleSecondaryFilesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const existingCount = isEditing
+      ? (editEntry?.entry_images?.length ?? 0) - removeSecondaryIds.length
+      : 0;
+    const currentCount = existingCount + secondaryFiles.length;
+    const remaining = 4 - currentCount;
+    if (remaining <= 0) {
+      toast({ title: "Limit reached", description: "Maximum 4 secondary images.", variant: "destructive" });
+      return;
+    }
+    setSecondaryFiles((prev) => [...prev, ...files.slice(0, remaining)]);
+    if (secondaryInputRef.current) secondaryInputRef.current.value = "";
   };
 
   const TypeIcon = file ? typeIcons[getFileType(file.type)] : Upload;
@@ -841,6 +939,80 @@ export function AddMemoryDialog({
               </p>
             </div>
           )}
+
+          {/* ===== Secondary images ===== */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">
+              Additional Photos ({(() => {
+                const existing = isEditing ? (editEntry?.entry_images?.length ?? 0) - removeSecondaryIds.length : 0;
+                return existing + secondaryFiles.length;
+              })()}/4, optional)
+            </label>
+            <Input
+              ref={secondaryInputRef}
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleSecondaryFilesChange}
+              className="hidden"
+            />
+            {/* Existing secondary images (edit mode) */}
+            {isEditing && editEntry?.entry_images && editEntry.entry_images.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {editEntry.entry_images
+                  .filter((img) => !removeSecondaryIds.includes(img.id))
+                  .map((img) => (
+                    <div key={img.id} className="relative w-16 h-16 rounded overflow-hidden border">
+                      {img.thumbnail_url && (
+                        <img src={img.thumbnail_url} alt="" className="w-full h-full object-cover" />
+                      )}
+                      <button
+                        type="button"
+                        className="absolute top-0 right-0 bg-black/60 rounded-bl p-0.5"
+                        onClick={() => setRemoveSecondaryIds((prev) => [...prev, img.id])}
+                      >
+                        <X className="h-3 w-3 text-white" />
+                      </button>
+                    </div>
+                  ))}
+              </div>
+            )}
+            {/* New secondary files */}
+            {secondaryFiles.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {secondaryFiles.map((f, i) => (
+                  <div key={i} className="relative w-16 h-16 rounded overflow-hidden border bg-muted flex items-center justify-center">
+                    <img src={URL.createObjectURL(f)} alt="" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      className="absolute top-0 right-0 bg-black/60 rounded-bl p-0.5"
+                      onClick={() => setSecondaryFiles((prev) => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="h-3 w-3 text-white" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(() => {
+              const existing = isEditing ? (editEntry?.entry_images?.length ?? 0) - removeSecondaryIds.length : 0;
+              const total = existing + secondaryFiles.length;
+              if (total < 4) {
+                return (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => secondaryInputRef.current?.click()}
+                  >
+                    <Plus className="h-4 w-4 mr-1.5" />
+                    Add photos
+                  </Button>
+                );
+              }
+              return null;
+            })()}
+          </div>
 
           {/* Description */}
           <div>

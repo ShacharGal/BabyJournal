@@ -8,12 +8,15 @@ import { deleteAudio } from "@/lib/audioUpload";
 export type Entry = Tables<"entries">;
 export type EntryInsert = TablesInsert<"entries">;
 
+export type EntryImage = Tables<"entry_images">;
+
 export type EntryWithTags = Entry & {
   created_by_nickname?: string | null;
   entry_tags: Array<{
     tag_id: string;
     tags: Tables<"tags">;
   }>;
+  entry_images: EntryImage[];
 };
 
 const PAGE_SIZE = 20;
@@ -32,7 +35,8 @@ export function useEntries(babyId?: string) {
           entry_tags (
             tag_id,
             tags (*)
-          )
+          ),
+          entry_images (*)
         `)
         .order("date", { ascending: false })
         .order("created_at", { ascending: false })

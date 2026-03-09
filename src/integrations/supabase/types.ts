@@ -153,6 +153,44 @@ export type Database = {
           },
         ]
       }
+      entry_images: {
+        Row: {
+          id: string
+          entry_id: string
+          drive_file_id: string | null
+          thumbnail_url: string | null
+          file_name: string | null
+          sort_order: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          entry_id: string
+          drive_file_id?: string | null
+          thumbnail_url?: string | null
+          file_name?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          entry_id?: string
+          drive_file_id?: string | null
+          thumbnail_url?: string | null
+          file_name?: string | null
+          sort_order?: number
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_images_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       entry_tags: {
         Row: {
           created_at: string

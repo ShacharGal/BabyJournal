@@ -112,6 +112,29 @@ export function MemoryDetailView({
         </div>
       )}
 
+      {/* Secondary images gallery */}
+      {entry.entry_images && entry.entry_images.length > 0 && (
+        <div className={`grid gap-1 px-4 pt-4 ${
+          entry.entry_images.length === 1 ? "grid-cols-1" :
+          entry.entry_images.length === 2 ? "grid-cols-2" :
+          "grid-cols-2"
+        }`}>
+          {entry.entry_images
+            .sort((a, b) => a.sort_order - b.sort_order)
+            .map((img) => (
+              <div key={img.id} className="rounded-lg overflow-hidden bg-muted">
+                {img.thumbnail_url && (
+                  <img
+                    src={img.thumbnail_url}
+                    alt=""
+                    className="w-full aspect-square object-cover"
+                  />
+                )}
+              </div>
+            ))}
+        </div>
+      )}
+
       {/* Content */}
       <div className="p-4 space-y-4">
         {/* Header metadata (LTR) */}
