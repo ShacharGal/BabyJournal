@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
+import { supabase } from "@/integrations/supabase/client";
 
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
   const dob = new Date(dateOfBirth);
@@ -174,29 +175,90 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
       )}
 
       {videoFileId && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={() => setVideoFileId(null)}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
-            onClick={() => setVideoFileId(null)}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <video
-            src={`https://drive.google.com/uc?export=download&id=${videoFileId}`}
-            className="w-[95vw] max-w-3xl max-h-[90vh] rounded-lg"
-            controls
-            autoPlay
-            playsInline
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        <VideoPlayer fileId={videoFileId} onClose={() => setVideoFileId(null)} />
       )}
     </>
+  );
+}
+
+function VideoPlayer({ fileId, onClose }: { fileId: string; onClose: () => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let revoke: string | null = null;
+
+    (async () => {
+      try {
+        console.log("[VideoPlayer] Fetching video:", fileId);
+        // Get access token via edge function
+        const { data: { session } } = await supabase.auth.getSession();
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+        const tokenRes = await fetch(`${supabaseUrl}/functions/v1/drive-upload`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${session?.access_token ?? supabaseKey}`,
+            "apikey": supabaseKey,
+          },
+          body: JSON.stringify({ action: "get-token" }),
+        });
+        const tokenBody = await tokenRes.json();
+        if (!tokenRes.ok) throw new Error(tokenBody?.error || "Failed to get token");
+
+        // Fetch video from Google Drive API
+        const videoRes = await fetch(
+          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
+          { headers: { Authorization: `Bearer ${tokenBody.accessToken}` } }
+        );
+        if (!videoRes.ok) throw new Error(`Drive download failed: ${videoRes.status}`);
+
+        const blob = await videoRes.blob();
+        const url = URL.createObjectURL(blob);
+        revoke = url;
+        setBlobUrl(url);
+        console.log("[VideoPlayer] Video ready, size:", (blob.size / 1024 / 1024).toFixed(1), "MB");
+      } catch (e: any) {
+        console.error("[VideoPlayer] Error:", e);
+        setError(e.message);
+      }
+    })();
+
+    return () => {
+      if (revoke) URL.revokeObjectURL(revoke);
+    };
+  }, [fileId]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
+      onClick={onClose}
+    >
+      <Button
+        variant="ghost"
+        size="icon"
+        className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
+        onClick={onClose}
+      >
+        <X className="h-6 w-6" />
+      </Button>
+      {error ? (
+        <p className="text-red-400 text-sm">{error}</p>
+      ) : !blobUrl ? (
+        <Loader2 className="h-8 w-8 animate-spin text-white" />
+      ) : (
+        <video
+          src={blobUrl}
+          className="w-[95vw] max-w-3xl max-h-[90vh] rounded-lg"
+          controls
+          autoPlay
+          playsInline
+          onClick={(e) => e.stopPropagation()}
+        />
+      )}
+    </div>
   );
 }
 
