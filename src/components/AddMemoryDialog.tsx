@@ -22,12 +22,11 @@ import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hoo
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, ImagePlus, Paperclip } from "lucide-react";
+import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip } from "lucide-react";
 import { generateAndUploadThumbnail, deleteThumbnail, uploadBase64Thumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { extractDateFromFile } from "@/lib/exifDate";
-import { GooglePhotosPicker } from "@/components/GooglePhotosPicker";
 
 const typeIcons = {
   photo: Image,
@@ -66,7 +65,6 @@ export function AddMemoryDialog({
   const [removeExistingAudio, setRemoveExistingAudio] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [removeExistingFile, setRemoveExistingFile] = useState(false);
-  const [photosPickerOpen, setPhotosPickerOpen] = useState(false);
 
   const recorder = useAudioRecorder();
 
@@ -119,7 +117,6 @@ export function AddMemoryDialog({
     const selectedFile = e.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      setPhotosPickerOpen(false);
       // Try to extract date from EXIF
       const exifDate = await extractDateFromFile(selectedFile);
       if (exifDate) setDate(exifDate);
@@ -144,22 +141,10 @@ export function AddMemoryDialog({
     setSelectedTags([]);
     setRemoveExistingFile(false);
     setRemoveExistingAudio(false);
-    setPhotosPickerOpen(false);
     setDate(new Date().toISOString().split("T")[0]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
     recorder.discard();
-  };
-
-  const handleGooglePhotoSelect = (photoFile: File, creationTime?: string) => {
-    setFile(photoFile);
-    setPhotosPickerOpen(false);
-    if (creationTime) {
-      const d = new Date(creationTime);
-      if (!isNaN(d.getTime())) {
-        setDate(d.toISOString().split("T")[0]);
-      }
-    }
   };
 
   const getEffectiveAudioFile = (): File | null => {
@@ -477,17 +462,6 @@ export function AddMemoryDialog({
                   <TypeIcon className="h-4 w-4 mr-2" />
                   {file ? file.name : "Choose file"}
                 </Button>
-                {isConnected && !file && (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setPhotosPickerOpen(!photosPickerOpen)}
-                    title="Pick from Google Photos"
-                  >
-                    <ImagePlus className="h-4 w-4" />
-                  </Button>
-                )}
                 {file && (
                   <Button
                     type="button"
@@ -506,17 +480,6 @@ export function AddMemoryDialog({
                 <p className="text-xs text-muted-foreground mt-1">
                   Connect Google Drive to upload files
                 </p>
-              )}
-
-              {/* Google Photos picker */}
-              {photosPickerOpen && (
-                <div className="mt-2">
-                  <GooglePhotosPicker
-                    open={photosPickerOpen}
-                    onClose={() => setPhotosPickerOpen(false)}
-                    onSelect={handleGooglePhotoSelect}
-                  />
-                </div>
               )}
             </div>
           )}
