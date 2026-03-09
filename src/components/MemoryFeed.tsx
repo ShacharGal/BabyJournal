@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useEntries, useDeleteEntry, type EntryWithTags } from "@/hooks/useEntries";
@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X, Play,
+  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X, Play, ChevronLeft, ChevronRight, Calendar,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -52,6 +52,9 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const { canEdit } = useAuthContext();
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
   const [videoFileId, setVideoFileId] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState<string>("");
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const monthRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const sentinelRef = useRef<HTMLDivElement>(null);
 
@@ -88,6 +91,70 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     if (filters.dateTo && entry.date > filters.dateTo) return false;
     return true;
   });
+
+  // Group entries by month key (YYYY-MM)
+  const groupedEntries = useMemo(() => {
+    const groups: { key: string; label: string; entries: EntryWithTags[] }[] = [];
+    let currentKey = "";
+    for (const entry of filteredEntries) {
+      const key = entry.date.slice(0, 7); // YYYY-MM
+      if (key !== currentKey) {
+        currentKey = key;
+        const d = new Date(key + "-01");
+        groups.push({ key, label: format(d, "MMMM yyyy"), entries: [] });
+      }
+      groups[groups.length - 1].entries.push(entry);
+    }
+    return groups;
+  }, [filteredEntries]);
+
+  // Track which month is visible via IntersectionObserver
+  const monthObserverRef = useRef<IntersectionObserver | null>(null);
+  const setMonthRef = useCallback((key: string, el: HTMLDivElement | null) => {
+    if (el) {
+      monthRefs.current.set(key, el);
+    } else {
+      monthRefs.current.delete(key);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (monthObserverRef.current) monthObserverRef.current.disconnect();
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the topmost visible month divider
+        for (const e of entries) {
+          if (e.isIntersecting) {
+            const key = (e.target as HTMLElement).dataset.month;
+            if (key) setCurrentMonth(key);
+          }
+        }
+      },
+      { rootMargin: "-60px 0px -80% 0px" }
+    );
+    monthObserverRef.current = observer;
+
+    monthRefs.current.forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, [groupedEntries]);
+
+  // Set initial month
+  useEffect(() => {
+    if (!currentMonth && groupedEntries.length > 0) {
+      setCurrentMonth(groupedEntries[0].key);
+    }
+  }, [groupedEntries, currentMonth]);
+
+  const scrollToMonth = (key: string) => {
+    const el = monthRefs.current.get(key);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setMonthPickerOpen(false);
+    }
+  };
+
+  const currentMonthLabel = groupedEntries.find((g) => g.key === currentMonth)?.label || "";
 
   const handleDelete = (entryId: string) => {
     if (confirm("Are you sure you want to delete this memory?")) {
@@ -129,20 +196,61 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 
   return (
     <>
+      {/* Sticky month/year header */}
+      {filteredEntries.length > 0 && (
+        <div className="sticky top-14 z-30 flex items-center justify-center py-1.5 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+          <button
+            onClick={() => setMonthPickerOpen(!monthPickerOpen)}
+            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1 rounded-full hover:bg-accent"
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            {currentMonthLabel}
+          </button>
+        </div>
+      )}
+
+      {/* Month picker dropdown */}
+      {monthPickerOpen && (
+        <div className="sticky top-[6.5rem] z-30 flex justify-center">
+          <div className="bg-popover border rounded-lg shadow-lg p-2 max-h-64 overflow-y-auto w-48">
+            {groupedEntries.map((group) => (
+              <button
+                key={group.key}
+                onClick={() => scrollToMonth(group.key)}
+                className={`w-full text-left text-sm px-3 py-1.5 rounded hover:bg-accent transition-colors ${group.key === currentMonth ? "bg-accent font-medium" : ""}`}
+              >
+                {group.label}
+                <span className="text-muted-foreground ml-1 text-xs">({group.entries.length})</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="space-y-4">
-        {filteredEntries.map((entry) => (
-          <MemoryCard
-            key={entry.id}
-            entry={entry}
-            babyName={getBabyName(entry.baby_id)}
-            babyDob={getBabyDob(entry.baby_id)}
-            onDelete={handleDelete}
-            onEdit={onEditEntry}
-            showBaby={!babyId}
-            canEdit={canEdit}
-            onImageTap={setLightboxUrl}
-            onVideoTap={setVideoFileId}
-          />
+        {groupedEntries.map((group) => (
+          <div key={group.key}>
+            <div
+              ref={(el) => setMonthRef(group.key, el)}
+              data-month={group.key}
+              className="scroll-mt-24"
+            />
+            {group.entries.map((entry) => (
+              <div key={entry.id} className="mb-4">
+                <MemoryCard
+                  entry={entry}
+                  babyName={getBabyName(entry.baby_id)}
+                  babyDob={getBabyDob(entry.baby_id)}
+                  onDelete={handleDelete}
+                  onEdit={onEditEntry}
+                  showBaby={!babyId}
+                  canEdit={canEdit}
+                  onImageTap={setLightboxUrl}
+                  onVideoTap={setVideoFileId}
+                />
+              </div>
+            ))}
+          </div>
         ))}
         <div ref={sentinelRef} className="h-1" />
         {isFetchingNextPage && (
