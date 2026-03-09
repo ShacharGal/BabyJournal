@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Heart, Calendar, Maximize2, Volume2,
+  Loader2, Heart, Calendar, Maximize2, Volume2, ChevronLeft, ChevronRight,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -149,6 +149,41 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 
   const currentMonthLabel = groupedEntries.find((g) => g.key === currentMonth)?.label || "";
 
+  // Calendar grid: available years and months with entries
+  const monthsWithEntries = useMemo(() => {
+    const set = new Set<string>();
+    for (const entry of filteredEntries) {
+      set.add(entry.date.slice(0, 7)); // YYYY-MM
+    }
+    return set;
+  }, [filteredEntries]);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<number>();
+    for (const key of monthsWithEntries) {
+      years.add(parseInt(key.slice(0, 4)));
+    }
+    return Array.from(years).sort((a, b) => b - a); // newest first
+  }, [monthsWithEntries]);
+
+  const [calendarYear, setCalendarYear] = useState<number>(() => {
+    if (currentMonth) return parseInt(currentMonth.slice(0, 4));
+    return new Date().getFullYear();
+  });
+
+  // Sync calendar year when currentMonth changes from scrolling
+  useEffect(() => {
+    if (currentMonth) {
+      setCalendarYear(parseInt(currentMonth.slice(0, 4)));
+    }
+  }, [currentMonth]);
+
+  const calendarYearIndex = availableYears.indexOf(calendarYear);
+  const canGoPrevYear = calendarYearIndex < availableYears.length - 1;
+  const canGoNextYear = calendarYearIndex > 0;
+
+  const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
   const handleDelete = (entryId: string) => {
     if (confirm("Are you sure you want to delete this memory?")) {
       deleteEntry.mutate(entryId, {
@@ -202,20 +237,54 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
         </div>
       )}
 
-      {/* Month picker dropdown */}
+      {/* Calendar grid picker */}
       {monthPickerOpen && (
         <div className="sticky top-[6.5rem] z-30 flex justify-center">
-          <div className="bg-popover border rounded-lg shadow-lg p-2 max-h-64 overflow-y-auto w-48">
-            {groupedEntries.map((group) => (
+          <div className="bg-popover border rounded-lg shadow-lg p-3 w-64">
+            {/* Year selector with arrows */}
+            <div className="flex items-center justify-between mb-3">
               <button
-                key={group.key}
-                onClick={() => scrollToMonth(group.key)}
-                className={`w-full text-left text-sm px-3 py-1.5 rounded hover:bg-accent transition-colors ${group.key === currentMonth ? "bg-accent font-medium" : ""}`}
+                onClick={() => canGoPrevYear && setCalendarYear(availableYears[calendarYearIndex + 1])}
+                disabled={!canGoPrevYear}
+                className="p-1 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
               >
-                {group.label}
-                <span className="text-muted-foreground ml-1 text-xs">({group.entries.length})</span>
+                <ChevronLeft className="h-4 w-4" />
               </button>
-            ))}
+              <span className="text-sm font-semibold">{calendarYear}</span>
+              <button
+                onClick={() => canGoNextYear && setCalendarYear(availableYears[calendarYearIndex - 1])}
+                disabled={!canGoNextYear}
+                className="p-1 rounded hover:bg-accent disabled:opacity-20 disabled:cursor-not-allowed transition-colors"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+            {/* 4x3 month grid */}
+            <div className="grid grid-cols-4 gap-1">
+              {MONTH_LABELS.map((label, i) => {
+                const monthKey = `${calendarYear}-${String(i + 1).padStart(2, "0")}`;
+                const hasEntries = monthsWithEntries.has(monthKey);
+                const isCurrent = monthKey === currentMonth;
+                return (
+                  <button
+                    key={monthKey}
+                    onClick={() => {
+                      if (hasEntries) scrollToMonth(monthKey);
+                    }}
+                    disabled={!hasEntries}
+                    className={`py-1.5 rounded text-xs transition-colors ${
+                      isCurrent
+                        ? "bg-foreground text-background font-bold"
+                        : hasEntries
+                          ? "font-semibold text-foreground hover:bg-accent"
+                          : "text-muted-foreground/40 cursor-not-allowed"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
