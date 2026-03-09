@@ -814,6 +814,7 @@ export function AddMemoryDialog({
           <div>
             <label className="text-sm font-medium mb-2 block">Description</label>
             <Textarea
+              dir="auto"
               placeholder="What's happening in this memory?"
               value={description}
               onChange={(e) => setDescription(e.target.value)}

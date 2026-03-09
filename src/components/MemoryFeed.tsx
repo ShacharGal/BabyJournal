@@ -379,7 +379,7 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
 
         {entry.description && (
           <div>
-            <p className={`text-sm whitespace-pre-wrap ${!expanded && descriptionLong ? "line-clamp-4" : ""}`}>
+            <p dir="auto" className={`text-sm whitespace-pre-wrap ${!expanded && descriptionLong ? "line-clamp-4" : ""}`}>
               {entry.description}
             </p>
             {descriptionLong && (
