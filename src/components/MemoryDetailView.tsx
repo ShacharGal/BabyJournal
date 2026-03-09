@@ -85,37 +85,51 @@ export function MemoryDetailView({
         )}
       </div>
 
-      {/* Hero media */}
-      {hasThumbnail && !canPlayVideo && (
-        <div className="w-full bg-black flex items-center justify-center">
-          <img
-            src={entry.thumbnail_url!}
-            alt={entry.description || "Memory"}
-            className="w-full max-h-[60vh] object-contain"
-          />
-        </div>
-      )}
+      {/* Media section */}
+      {(() => {
+        // Build unified album: hero image first, then secondary images
+        const albumImages: { id: string; url: string }[] = [];
+        if (hasThumbnail && !canPlayVideo) {
+          albumImages.push({ id: "hero", url: entry.thumbnail_url! });
+        }
+        if (entry.entry_images) {
+          for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
+            if (img.thumbnail_url) {
+              albumImages.push({ id: img.id, url: img.thumbnail_url });
+            }
+          }
+        }
 
-      {canPlayVideo && (
-        <DetailVideoPlayer
-          fileId={entry.drive_file_id!}
-          thumbnailUrl={entry.thumbnail_url}
-        />
-      )}
+        if (canPlayVideo) {
+          // Video gets its own player, secondary images as album below
+          return (
+            <>
+              <DetailVideoPlayer
+                fileId={entry.drive_file_id!}
+                thumbnailUrl={entry.thumbnail_url}
+              />
+              {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
+            </>
+          );
+        }
 
-      {/* Audio-only hero */}
-      {!hasThumbnail && !canPlayVideo && hasAudio && (
-        <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-12 gap-3">
-          <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
-            <Volume2 className="h-8 w-8 text-primary" />
-          </div>
-        </div>
-      )}
+        if (albumImages.length > 0) {
+          return <ImageAlbum images={albumImages} />;
+        }
 
-      {/* Secondary images — horizontal scroll album */}
-      {entry.entry_images && entry.entry_images.length > 0 && (
-        <ImageAlbum images={entry.entry_images.sort((a, b) => a.sort_order - b.sort_order)} />
-      )}
+        // Audio-only hero
+        if (hasAudio) {
+          return (
+            <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-12 gap-3">
+              <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
+                <Volume2 className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+          );
+        }
+
+        return null;
+      })()}
 
       {/* Content */}
       <div className="p-4 space-y-4">
@@ -190,7 +204,7 @@ export function MemoryDetailView({
   );
 }
 
-function ImageAlbum({ images }: { images: { id: string; thumbnail_url: string | null }[] }) {
+function ImageAlbum({ images }: { images: { id: string; url: string }[] }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -213,13 +227,11 @@ function ImageAlbum({ images }: { images: { id: string; thumbnail_url: string | 
       >
         {images.map((img) => (
           <div key={img.id} className="w-full shrink-0 snap-center">
-            {img.thumbnail_url && (
-              <img
-                src={img.thumbnail_url}
-                alt=""
-                className="w-full aspect-square object-cover"
-              />
-            )}
+            <img
+              src={img.url}
+              alt=""
+              className="w-full aspect-square object-cover"
+            />
           </div>
         ))}
       </div>
