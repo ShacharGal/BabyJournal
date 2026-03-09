@@ -2,7 +2,7 @@ import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 interface GoogleToken {
@@ -124,10 +124,10 @@ Deno.serve(async (req) => {
 
     // Combine all parts
     const totalLength = parts.reduce((sum, part) => sum + part.length, 0);
-    const body = new Uint8Array(totalLength);
+    const uploadBody = new Uint8Array(totalLength);
     let offset = 0;
     for (const part of parts) {
-      body.set(part, offset);
+      uploadBody.set(part, offset);
       offset += part.length;
     }
 
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": `multipart/related; boundary=${boundary}`,
         },
-        body: body,
+        body: uploadBody,
       }
     );
 

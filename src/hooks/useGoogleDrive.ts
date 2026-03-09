@@ -90,8 +90,15 @@ async function getValidAccessToken(): Promise<string> {
   });
 
   if (response.error) {
-    console.error("[DriveUpload] get-token error:", response.error);
-    throw new Error("Failed to get Google token: " + response.error.message);
+    // Try to extract the actual error message from the response body
+    let detail = response.error.message;
+    try {
+      if (response.data && typeof response.data === "object" && response.data.error) {
+        detail = response.data.error;
+      }
+    } catch (_) { /* ignore */ }
+    console.error("[DriveUpload] get-token error:", detail, "raw:", response.error, "data:", response.data);
+    throw new Error("Failed to get Google token: " + detail);
   }
 
   const { accessToken } = response.data as { accessToken: string };
