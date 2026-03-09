@@ -36,11 +36,17 @@ npm run lint         # ESLint
 5. **Never batch unrelated changes.** One logical change per commit. If fixing a bug AND adding a feature, make two commits.
 6. **Add console.log debugging to new features.** Prefix logs with a tag like [DriveUpload] or [AudioRec] so they are easy to filter in browser DevTools.
 
+### Git Identity
+All commits MUST use this author so Vercel accepts them:
+```bash
+git commit --author="ShacharGal <37271251+ShacharGal@users.noreply.github.com>" -m "message"
+```
+
 ### Commit and Push
 ```bash
 npm run build                    # MUST pass
 git add -A
-git commit -m "Short description of change"
+git commit --author="ShacharGal <37271251+ShacharGal@users.noreply.github.com>" -m "Short description of change"
 git push origin main             # Vercel auto-deploys
 ```
 

@@ -85,25 +85,34 @@ export function useCreateDriveFolder() {
 /** Get a valid access token via the edge function (bypasses RLS) */
 async function getValidAccessToken(): Promise<string> {
   console.log("[DriveUpload] Getting access token via edge function...");
-  const response = await supabase.functions.invoke("drive-upload", {
-    body: { action: "get-token" },
+
+  // Use raw fetch instead of supabase.functions.invoke so we can read the error body
+  const { data: { session } } = await supabase.auth.getSession();
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+  const res = await fetch(`${supabaseUrl}/functions/v1/drive-upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session?.access_token ?? supabaseKey}`,
+      "apikey": supabaseKey,
+    },
+    body: JSON.stringify({ action: "get-token" }),
   });
 
-  if (response.error) {
-    // Try to extract the actual error message from the response body
-    let detail = response.error.message;
-    try {
-      if (response.data && typeof response.data === "object" && response.data.error) {
-        detail = response.data.error;
-      }
-    } catch (_) { /* ignore */ }
-    console.error("[DriveUpload] get-token error:", detail, "raw:", response.error, "data:", response.data);
+  const body = await res.json();
+  console.log("[DriveUpload] get-token response:", res.status, body);
+
+  if (!res.ok) {
+    const detail = body?.error || `HTTP ${res.status}`;
+    console.error("[DriveUpload] get-token FAILED:", detail);
     throw new Error("Failed to get Google token: " + detail);
   }
 
-  const { accessToken } = response.data as { accessToken: string };
+  const { accessToken } = body as { accessToken: string };
   if (!accessToken) {
-    console.error("[DriveUpload] No accessToken in response:", response.data);
+    console.error("[DriveUpload] No accessToken in response:", body);
     throw new Error("No access token returned from server");
   }
 
