@@ -22,7 +22,7 @@ import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hoo
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip } from "lucide-react";
+import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip, Quote } from "lucide-react";
 import { generateAndUploadThumbnail, deleteThumbnail, uploadBase64Thumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
@@ -456,7 +456,7 @@ export function AddMemoryDialog({
                 className="flex-1"
                 onClick={() => setPostType("dialogue")}
               >
-                <Mic className="h-4 w-4 mr-1.5" />
+                <Quote className="h-4 w-4 mr-1.5" />
                 Dialogue / Quote
               </Button>
             </div>

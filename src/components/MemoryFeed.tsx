@@ -313,40 +313,8 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
         </div>
       </div>
 
-      {/* Body: Text + optional media split */}
+      {/* Body: optional media (left) + text (right) */}
       <div className={`px-4 py-2 ${showSplit ? "flex gap-3" : ""}`}>
-        {/* Text container — always present, takes right side in RTL context */}
-        <div
-          className={`relative ${showSplit ? "flex-1 min-w-0" : "w-full"}`}
-        >
-          {entry.description ? (
-            <div
-              dir="rtl"
-              className={`text-sm text-right whitespace-pre-wrap line-clamp-5 ${
-                isDialogue
-                  ? "border-r-2 border-primary/30 pr-2 bg-primary/5 rounded-l-md py-1"
-                  : ""
-              }`}
-            >
-              {isDialogue
-                ? parseDialogueText(entry.description)
-                : entry.description
-              }
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground italic">No description</div>
-          )}
-
-          {/* Expand icon — bottom-left of text area */}
-          <button
-            onClick={() => onExpand(entry)}
-            className="absolute bottom-0 left-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
-            title="Expand"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
-        </div>
-
         {/* Media container — left side, 35% width */}
         {hasMedia && (
           <div className="w-[35%] shrink-0">
@@ -375,7 +343,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
           </div>
         )}
 
-        {/* Audio-only: icon in place of media */}
+        {/* Audio-only: icon in place of media (left side) */}
         {hasAudioOnly && (
           <div className="w-[35%] shrink-0">
             <div
@@ -386,6 +354,38 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
             </div>
           </div>
         )}
+
+        {/* Text container — right side (or full width if no media) */}
+        <div
+          className={`relative ${showSplit ? "flex-1 min-w-0" : "w-full"}`}
+        >
+          {entry.description ? (
+            <div
+              dir="auto"
+              className={`text-sm whitespace-pre-wrap line-clamp-5 ${
+                isDialogue
+                  ? "border-r-2 border-primary/30 pr-2 bg-primary/5 rounded-l-md py-1"
+                  : ""
+              }`}
+            >
+              {isDialogue
+                ? parseDialogueText(entry.description)
+                : entry.description
+              }
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground italic">No description</div>
+          )}
+
+          {/* Expand icon — bottom-left of text area */}
+          <button
+            onClick={() => onExpand(entry)}
+            className="absolute bottom-0 left-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            title="Expand"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* Footer (LTR/RTL mix): Contributor left, Tags right */}
