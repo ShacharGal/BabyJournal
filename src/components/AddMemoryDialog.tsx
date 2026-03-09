@@ -59,6 +59,7 @@ export function AddMemoryDialog({
   const [selectedBabyId, setSelectedBabyId] = useState<string>("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [postType, setPostType] = useState<"standard" | "dialogue">("standard");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -87,6 +88,7 @@ export function AddMemoryDialog({
       setSelectedBabyId(editEntry.baby_id);
       setDescription(editEntry.description || "");
       setDate(editEntry.date);
+      setPostType(((editEntry as any).post_type as "standard" | "dialogue") || "standard");
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
       setAudioFile(null);
@@ -139,6 +141,7 @@ export function AddMemoryDialog({
     setFile(null);
     setAudioFile(null);
     setSelectedTags([]);
+    setPostType("standard");
     setRemoveExistingFile(false);
     setRemoveExistingAudio(false);
     setDate(new Date().toISOString().split("T")[0]);
@@ -181,6 +184,7 @@ export function AddMemoryDialog({
           baby_id: selectedBabyId,
           description: description.trim() || null,
           date,
+          post_type: postType,
         };
 
         // Handle file replacement or removal
@@ -284,6 +288,7 @@ export function AddMemoryDialog({
           entry: {
             baby_id: selectedBabyId,
             type: entryType,
+            post_type: postType,
             description: description.trim() || null,
             date,
             drive_file_id: driveFileId,
@@ -428,6 +433,33 @@ export function AddMemoryDialog({
           <div>
             <label className="text-sm font-medium mb-2 block">Date</label>
             <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+
+          {/* Entry Type */}
+          <div>
+            <label className="text-sm font-medium mb-2 block">Entry Type</label>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant={postType === "standard" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setPostType("standard")}
+              >
+                <FileText className="h-4 w-4 mr-1.5" />
+                Standard
+              </Button>
+              <Button
+                type="button"
+                variant={postType === "dialogue" ? "default" : "outline"}
+                size="sm"
+                className="flex-1"
+                onClick={() => setPostType("dialogue")}
+              >
+                <Mic className="h-4 w-4 mr-1.5" />
+                Dialogue / Quote
+              </Button>
+            </div>
           </div>
 
           {/* Hidden file inputs */}

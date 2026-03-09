@@ -6,11 +6,12 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Image, Video, Mic, FileText, Trash2, Users, Heart, Pencil, X, Play, ChevronLeft, ChevronRight, Calendar,
+  Loader2, Heart, Calendar, Maximize2, Volume2,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
-import { supabase } from "@/integrations/supabase/client";
+import { MemoryDetailView } from "@/components/MemoryDetailView";
+import { parseDialogueText } from "@/lib/dialogueParser";
 
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
   const dob = new Date(dateOfBirth);
@@ -30,13 +31,6 @@ function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
     : `${years} year${years !== 1 ? "s" : ""} old`;
 }
 
-const typeIcons = {
-  photo: Image,
-  video: Video,
-  audio: Mic,
-  text: FileText,
-};
-
 interface MemoryFeedProps {
   babyId?: string;
   filters: Filters;
@@ -50,8 +44,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
   const { canEdit } = useAuthContext();
-  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
-  const [videoFileId, setVideoFileId] = useState<string | null>(null);
+  const [detailEntry, setDetailEntry] = useState<EntryWithTags | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const monthRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -92,12 +85,11 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     return true;
   });
 
-  // Group entries by month key (YYYY-MM)
   const groupedEntries = useMemo(() => {
     const groups: { key: string; label: string; entries: EntryWithTags[] }[] = [];
     let currentKey = "";
     for (const entry of filteredEntries) {
-      const key = entry.date.slice(0, 7); // YYYY-MM
+      const key = entry.date.slice(0, 7);
       if (key !== currentKey) {
         currentKey = key;
         const d = new Date(key + "-01");
@@ -108,7 +100,6 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     return groups;
   }, [filteredEntries]);
 
-  // Track which month is visible via IntersectionObserver
   const monthObserverRef = useRef<IntersectionObserver | null>(null);
   const setMonthRef = useCallback((key: string, el: HTMLDivElement | null) => {
     if (el) {
@@ -123,7 +114,6 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 
     const observer = new IntersectionObserver(
       (entries) => {
-        // Find the topmost visible month divider
         for (const e of entries) {
           if (e.isIntersecting) {
             const key = (e.target as HTMLElement).dataset.month;
@@ -139,7 +129,6 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     return () => observer.disconnect();
   }, [groupedEntries]);
 
-  // Set initial month
   useEffect(() => {
     if (!currentMonth && groupedEntries.length > 0) {
       setCurrentMonth(groupedEntries[0].key);
@@ -227,7 +216,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
         </div>
       )}
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {groupedEntries.map((group) => (
           <div key={group.key}>
             <div
@@ -236,17 +225,13 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
               className="scroll-mt-24"
             />
             {group.entries.map((entry) => (
-              <div key={entry.id} className="mb-4">
+              <div key={entry.id} className="mb-3">
                 <MemoryCard
                   entry={entry}
                   babyName={getBabyName(entry.baby_id)}
                   babyDob={getBabyDob(entry.baby_id)}
-                  onDelete={handleDelete}
-                  onEdit={onEditEntry}
                   showBaby={!babyId}
-                  canEdit={canEdit}
-                  onImageTap={setLightboxUrl}
-                  onVideoTap={setVideoFileId}
+                  onExpand={setDetailEntry}
                 />
               </div>
             ))}
@@ -260,268 +245,161 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
         )}
       </div>
 
-      {lightboxUrl && (
-        <div
-          className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-          onClick={() => setLightboxUrl(null)}
-        >
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-4 right-4 text-white hover:bg-white/20"
-            onClick={() => setLightboxUrl(null)}
-          >
-            <X className="h-6 w-6" />
-          </Button>
-          <img
-            src={lightboxUrl}
-            alt="Full size"
-            className="max-h-[90vh] max-w-[95vw] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
-      )}
-
-      {videoFileId && (
-        <VideoPlayer fileId={videoFileId} onClose={() => setVideoFileId(null)} />
+      {/* Detail View Modal */}
+      {detailEntry && (
+        <MemoryDetailView
+          entry={detailEntry}
+          babyName={getBabyName(detailEntry.baby_id)}
+          babyDob={getBabyDob(detailEntry.baby_id)}
+          canEdit={canEdit}
+          onClose={() => setDetailEntry(null)}
+          onEdit={(entry) => {
+            setDetailEntry(null);
+            onEditEntry?.(entry);
+          }}
+          onDelete={(id) => {
+            setDetailEntry(null);
+            handleDelete(id);
+          }}
+        />
       )}
     </>
   );
 }
 
-function VideoPlayer({ fileId, onClose }: { fileId: string; onClose: () => void }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let revoke: string | null = null;
-
-    (async () => {
-      try {
-        console.log("[VideoPlayer] Fetching video:", fileId);
-        // Get access token via edge function
-        const { data: { session } } = await supabase.auth.getSession();
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        const tokenRes = await fetch(`${supabaseUrl}/functions/v1/drive-upload`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${session?.access_token ?? supabaseKey}`,
-            "apikey": supabaseKey,
-          },
-          body: JSON.stringify({ action: "get-token" }),
-        });
-        const tokenBody = await tokenRes.json();
-        if (!tokenRes.ok) throw new Error(tokenBody?.error || "Failed to get token");
-
-        // Fetch video from Google Drive API
-        const videoRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-          { headers: { Authorization: `Bearer ${tokenBody.accessToken}` } }
-        );
-        if (!videoRes.ok) throw new Error(`Drive download failed: ${videoRes.status}`);
-
-        const blob = await videoRes.blob();
-        const url = URL.createObjectURL(blob);
-        revoke = url;
-        setBlobUrl(url);
-        console.log("[VideoPlayer] Video ready, size:", (blob.size / 1024 / 1024).toFixed(1), "MB");
-      } catch (e: any) {
-        console.error("[VideoPlayer] Error:", e);
-        setError(e.message);
-      }
-    })();
-
-    return () => {
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
-  }, [fileId]);
-
-  return (
-    <div
-      className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center"
-      onClick={onClose}
-    >
-      <Button
-        variant="ghost"
-        size="icon"
-        className="absolute top-4 right-4 z-10 text-white hover:bg-white/20"
-        onClick={onClose}
-      >
-        <X className="h-6 w-6" />
-      </Button>
-      {error ? (
-        <p className="text-red-400 text-sm">{error}</p>
-      ) : !blobUrl ? (
-        <Loader2 className="h-8 w-8 animate-spin text-white" />
-      ) : (
-        <video
-          src={blobUrl}
-          className="w-[95vw] max-w-3xl max-h-[90vh] rounded-lg"
-          controls
-          autoPlay
-          playsInline
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
-    </div>
-  );
-}
+/* ──────────────────────────────────────────────────────────────── */
+/*  MemoryCard — Text-First Feed Card                              */
+/* ──────────────────────────────────────────────────────────────── */
 
 interface MemoryCardProps {
   entry: EntryWithTags;
   babyName: string;
   babyDob: string | null;
-  onDelete: (id: string) => void;
-  onEdit?: (entry: EntryWithTags) => void;
   showBaby: boolean;
-  canEdit: boolean;
-  onImageTap: (url: string) => void;
-  onVideoTap: (driveFileId: string) => void;
+  onExpand: (entry: EntryWithTags) => void;
 }
 
-function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canEdit, onImageTap, onVideoTap }: MemoryCardProps) {
-  const [expanded, setExpanded] = useState(false);
-  const TypeIcon = typeIcons[entry.type as keyof typeof typeIcons] || FileText;
-  const descriptionLong = (entry.description?.length ?? 0) > 200;
+function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCardProps) {
   const audioUrl = (entry as any).audio_url as string | null;
-  const audioFileName = (entry as any).audio_file_name as string | null;
-  const hasAudio = !!audioUrl;
   const hasThumbnail = !!entry.thumbnail_url;
   const isVideo = entry.type === "video";
-  const canPlayVideo = isVideo && !!entry.drive_file_id;
+  const hasAudio = !!audioUrl;
+  const isDialogue = (entry as any).post_type === "dialogue";
 
-  const handleThumbnailTap = () => {
-    if (canPlayVideo) {
-      onVideoTap(entry.drive_file_id!);
-    } else if (entry.thumbnail_url) {
-      onImageTap(entry.thumbnail_url);
-    }
-  };
+  // Determine body scenario
+  const hasMedia = hasThumbnail || (isVideo && !!entry.drive_file_id);
+  const hasAudioOnly = !hasMedia && hasAudio;
+  const showSplit = hasMedia || hasAudioOnly;
 
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-      {/* Thumbnail image (with play overlay for playable videos) */}
-      {hasThumbnail && (
-        <div
-          className="relative w-full aspect-square overflow-hidden cursor-pointer"
-          onClick={handleThumbnailTap}
-        >
-          <img
-            src={entry.thumbnail_url}
-            alt={entry.description || "Memory"}
-            className="w-full h-full object-cover"
-          />
-          {canPlayVideo && (
-            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-              <div className="w-16 h-16 rounded-full bg-black/50 flex items-center justify-center">
-                <Play className="h-8 w-8 text-white ml-1" fill="white" />
-              </div>
-            </div>
+      {/* Header (LTR): Date left, Name + Age right */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <span className="text-xs font-medium text-muted-foreground">
+          {format(new Date(entry.date), "MMM d, yyyy")}
+        </span>
+        <div className="flex items-center gap-1.5">
+          {showBaby && (
+            <span className="text-xs font-medium">{babyName}</span>
+          )}
+          {!showBaby && (
+            <span className="text-xs font-medium">{babyName}</span>
+          )}
+          {babyDob && (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+              {formatAgeAtDate(babyDob, entry.date)}
+            </Badge>
           )}
         </div>
-      )}
+      </div>
 
-      {/* Video without thumbnail (old entries) */}
-      {!hasThumbnail && canPlayVideo && (
+      {/* Body: Text + optional media split */}
+      <div className={`px-4 py-2 ${showSplit ? "flex gap-3" : ""}`}>
+        {/* Text container — always present, takes right side in RTL context */}
         <div
-          className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2 cursor-pointer"
-          onClick={() => onVideoTap(entry.drive_file_id!)}
+          className={`relative ${showSplit ? "flex-1 min-w-0" : "w-full"}`}
         >
-          <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
-            <Play className="h-7 w-7 text-primary ml-0.5" fill="currentColor" />
-          </div>
-          <span className="text-xs text-muted-foreground">Tap to play video</span>
-        </div>
-      )}
+          {entry.description ? (
+            <div
+              dir="rtl"
+              className={`text-sm text-right whitespace-pre-wrap line-clamp-5 ${
+                isDialogue
+                  ? "border-r-2 border-primary/30 pr-2 bg-primary/5 rounded-l-md py-1"
+                  : ""
+              }`}
+            >
+              {isDialogue
+                ? parseDialogueText(entry.description)
+                : entry.description
+              }
+            </div>
+          ) : (
+            <div className="text-sm text-muted-foreground italic">No description</div>
+          )}
 
-      {/* Audio-only banner (no photo/video) */}
-      {!hasThumbnail && !isVideo && hasAudio && (
-        <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-8 gap-2">
-          <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
-            <Mic className="h-7 w-7 text-primary" />
-          </div>
-          <span className="text-xs text-muted-foreground">{audioFileName || "Audio clip"}</span>
-        </div>
-      )}
-
-      <div className="p-4 space-y-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-2 flex-wrap">
-            <TypeIcon className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="text-sm font-medium">
-              {format(new Date(entry.date), "MMM d, yyyy")}
-            </span>
-            {babyDob && (
-              <Badge variant="secondary" className="text-xs">
-                {formatAgeAtDate(babyDob, entry.date)}
-              </Badge>
-            )}
-            {showBaby && (
-              <Badge variant="outline" className="text-xs">
-                <Users className="h-3 w-3 mr-1" />
-                {babyName}
-              </Badge>
-            )}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {canEdit && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit?.(entry)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
-            )}
-            {canEdit && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive hover:text-destructive"
-                onClick={() => onDelete(entry.id)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            )}
-          </div>
+          {/* Expand icon — bottom-left of text area */}
+          <button
+            onClick={() => onExpand(entry)}
+            className="absolute bottom-0 left-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
+            title="Expand"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
         </div>
 
-        {entry.description && (
-          <div>
-            <p dir="auto" className={`text-sm whitespace-pre-wrap ${!expanded && descriptionLong ? "line-clamp-4" : ""}`}>
-              {entry.description}
-            </p>
-            {descriptionLong && (
-              <button
-                className="text-xs text-muted-foreground mt-1 hover:underline"
-                onClick={() => setExpanded(!expanded)}
-              >
-                {expanded ? "Show less" : "See more..."}
-              </button>
-            )}
+        {/* Media container — left side, 35% width */}
+        {hasMedia && (
+          <div className="w-[35%] shrink-0">
+            <div className="relative w-full overflow-hidden rounded-lg" style={{ aspectRatio: "4/5" }}>
+              {hasThumbnail ? (
+                <img
+                  src={entry.thumbnail_url!}
+                  alt=""
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                /* Video without thumbnail */
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                    <div className="w-0 h-0 border-l-[12px] border-l-primary border-y-[7px] border-y-transparent ml-0.5" />
+                  </div>
+                </div>
+              )}
+              {/* Video indicator overlay */}
+              {isVideo && hasThumbnail && (
+                <div className="absolute bottom-1 right-1 bg-black/60 rounded px-1 py-0.5">
+                  <span className="text-[9px] text-white font-medium">VIDEO</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
-        {/* Inline audio player */}
-        {hasAudio && (
-          <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-2">
-            <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
-            <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
+        {/* Audio-only: icon in place of media */}
+        {hasAudioOnly && (
+          <div className="w-[35%] shrink-0">
+            <div
+              className="w-full overflow-hidden rounded-lg bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center"
+              style={{ aspectRatio: "4/5" }}
+            >
+              <Volume2 className="h-8 w-8 text-primary/60" />
+            </div>
           </div>
         )}
+      </div>
 
-        {entry.created_by_nickname && (
-          <p className="text-xs text-muted-foreground">
-            Added by {entry.created_by_nickname}
-          </p>
-        )}
-
+      {/* Footer (LTR/RTL mix): Contributor left, Tags right */}
+      <div className="flex items-center justify-between px-4 pb-3 pt-1 gap-2">
+        <div className="text-xs text-muted-foreground shrink-0">
+          {entry.created_by_nickname ? `Added by ${entry.created_by_nickname}` : "\u00A0"}
+        </div>
         {entry.entry_tags.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1 justify-end min-w-0">
             {entry.entry_tags.map((et) => (
               <Badge
                 key={et.tag_id}
                 variant="secondary"
-                className="text-xs"
+                className="text-[10px] px-1.5 py-0"
                 style={{
                   backgroundColor: `${et.tags.color}20`,
                   color: et.tags.color || undefined,
@@ -536,4 +414,3 @@ function MemoryCard({ entry, babyName, babyDob, onDelete, onEdit, showBaby, canE
     </div>
   );
 }
-

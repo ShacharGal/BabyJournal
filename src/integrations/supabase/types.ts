@@ -82,6 +82,7 @@ export type Database = {
           file_size: number | null
           id: string
           mime_type: string | null
+          post_type: string
           thumbnail_url: string | null
           type: string
           updated_at: string
@@ -102,6 +103,7 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          post_type?: string
           thumbnail_url?: string | null
           type: string
           updated_at?: string
@@ -122,6 +124,7 @@ export type Database = {
           file_size?: number | null
           id?: string
           mime_type?: string | null
+          post_type?: string
           thumbnail_url?: string | null
           type?: string
           updated_at?: string
