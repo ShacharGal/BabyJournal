@@ -186,11 +186,12 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
           >
             <X className="h-6 w-6" />
           </Button>
-          <iframe
-            src={`https://drive.google.com/file/d/${videoFileId}/preview`}
-            className="w-[95vw] max-w-3xl aspect-video rounded-lg"
-            allow="autoplay"
-            allowFullScreen
+          <video
+            src={`https://drive.google.com/uc?export=download&id=${videoFileId}`}
+            className="w-[95vw] max-w-3xl max-h-[90vh] rounded-lg"
+            controls
+            autoPlay
+            playsInline
             onClick={(e) => e.stopPropagation()}
           />
         </div>

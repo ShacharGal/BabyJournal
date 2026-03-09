@@ -33,6 +33,7 @@ import { GoogleDriveConnect } from "@/components/GoogleDriveConnect";
 import { AddChildForm } from "@/components/AddChildForm";
 import { UserManagement } from "@/components/UserManagement";
 import { SearchFilters, type Filters } from "@/components/SearchFilters";
+import { useGoogleConnection } from "@/hooks/useGoogleDrive";
 
 interface AppNavBarProps {
   selectedBabyId?: string;
@@ -49,8 +50,10 @@ export function AppNavBar({
 }: AppNavBarProps) {
   const { data: babies } = useBabies();
   const { user, canEdit, logout } = useAuthContext();
+  const { data: googleConnection } = useGoogleConnection();
   const [searchOpen, setSearchOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const isDriveConnected = !!googleConnection?.refresh_token;
 
   const selectedBaby = babies?.find((b) => b.id === selectedBabyId);
   const childLabel = selectedBaby?.name ?? "All Children";
@@ -128,10 +131,16 @@ export function AppNavBar({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9"
+                className="h-9 w-9 relative"
                 onClick={() => setSettingsOpen(true)}
               >
                 <Menu className="h-4 w-4" />
+                {canEdit && (
+                  <span
+                    className={`absolute top-1 right-1 h-2 w-2 rounded-full ${isDriveConnected ? "bg-green-500" : "bg-red-500"}`}
+                    title={isDriveConnected ? "Google Drive connected" : "Google Drive disconnected"}
+                  />
+                )}
               </Button>
             </div>
           </div>
