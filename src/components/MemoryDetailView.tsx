@@ -193,68 +193,32 @@ function DetailVideoPlayer({
   fileId: string;
   thumbnailUrl: string | null;
 }) {
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [streamUrl, setStreamUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   const [started, setStarted] = useState(false);
 
   useEffect(() => {
     if (!started) return;
-    let revoke: string | null = null;
 
     (async () => {
       try {
-        setLoading(true);
-        console.log("[DetailVideoPlayer] Fetching video:", fileId);
+        console.log("[DetailVideoPlayer] Building stream URL for:", fileId);
         const {
           data: { session },
         } = await supabase.auth.getSession();
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+        const token = session?.access_token ?? supabaseKey;
 
-        const tokenRes = await fetch(
-          `${supabaseUrl}/functions/v1/drive-upload`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session?.access_token ?? supabaseKey}`,
-              apikey: supabaseKey,
-            },
-            body: JSON.stringify({ action: "get-token" }),
-          }
-        );
-        const tokenBody = await tokenRes.json();
-        if (!tokenRes.ok)
-          throw new Error(tokenBody?.error || "Failed to get token");
-
-        const videoRes = await fetch(
-          `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`,
-          { headers: { Authorization: `Bearer ${tokenBody.accessToken}` } }
-        );
-        if (!videoRes.ok)
-          throw new Error(`Drive download failed: ${videoRes.status}`);
-
-        const blob = await videoRes.blob();
-        const url = URL.createObjectURL(blob);
-        revoke = url;
-        setBlobUrl(url);
-        console.log(
-          "[DetailVideoPlayer] Video ready, size:",
-          (blob.size / 1024 / 1024).toFixed(1),
-          "MB"
-        );
+        // Use the streaming proxy edge function — browser handles Range requests natively
+        const url = `${supabaseUrl}/functions/v1/drive-stream?fileId=${encodeURIComponent(fileId)}&authorization=${encodeURIComponent(`Bearer ${token}`)}&apikey=${encodeURIComponent(supabaseKey)}`;
+        setStreamUrl(url);
+        console.log("[DetailVideoPlayer] Stream URL ready");
       } catch (e: any) {
         console.error("[DetailVideoPlayer] Error:", e);
         setError(e.message);
-      } finally {
-        setLoading(false);
       }
     })();
-
-    return () => {
-      if (revoke) URL.revokeObjectURL(revoke);
-    };
   }, [fileId, started]);
 
   if (!started) {
@@ -288,7 +252,7 @@ function DetailVideoPlayer({
     );
   }
 
-  if (loading || !blobUrl) {
+  if (!streamUrl) {
     return (
       <div className="w-full bg-black flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-white" />
@@ -299,7 +263,7 @@ function DetailVideoPlayer({
   return (
     <div className="w-full bg-black flex items-center justify-center">
       <video
-        src={blobUrl}
+        src={streamUrl}
         className="w-full max-h-[60vh]"
         controls
         autoPlay
