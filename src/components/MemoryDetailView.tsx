@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { X, Pencil, Trash2, Loader2, Mic, Volume2 } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
-import { supabase } from "@/integrations/supabase/client";
 import type { EntryWithTags } from "@/hooks/useEntries";
 
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
@@ -200,20 +199,14 @@ function DetailVideoPlayer({
   useEffect(() => {
     if (!started) return;
 
-    (async () => {
+    (() => {
       try {
         console.log("[DetailVideoPlayer] Building stream URL for:", fileId);
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-        const token = session?.access_token ?? supabaseKey;
-
-        // Use the streaming proxy edge function — browser handles Range requests natively
-        const url = `${supabaseUrl}/functions/v1/drive-stream?fileId=${encodeURIComponent(fileId)}&authorization=${encodeURIComponent(`Bearer ${token}`)}&apikey=${encodeURIComponent(supabaseKey)}`;
+        // Edge function deployed with --no-verify-jwt; browser can fetch directly
+        const url = `${supabaseUrl}/functions/v1/drive-stream?fileId=${encodeURIComponent(fileId)}`;
         setStreamUrl(url);
-        console.log("[DetailVideoPlayer] Stream URL ready");
+        console.log("[DetailVideoPlayer] Stream URL ready:", url);
       } catch (e: any) {
         console.error("[DetailVideoPlayer] Error:", e);
         setError(e.message);

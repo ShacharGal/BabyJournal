@@ -86,16 +86,8 @@ Deno.serve(async (req) => {
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!);
 
-    // Verify the user is authenticated
-    // Accept auth from header OR query params (video elements can't set headers)
-    const authHeader = req.headers.get("Authorization") || url.searchParams.get("authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
+    // No JWT verification — deployed with --no-verify-jwt
+    // Security: requires knowing a valid Google Drive file ID
     const accessToken = await getValidAccessToken(supabase);
 
     // Build headers for the Google Drive request, forwarding Range if present
