@@ -368,7 +368,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
               dir="auto"
               className={`text-sm whitespace-pre-wrap line-clamp-5 ${
                 isDialogue
-                  ? "border-r-2 border-primary/30 pr-2 bg-primary/5 rounded-l-md py-1"
+                  ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
                   : ""
               }`}
             >

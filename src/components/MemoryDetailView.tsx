@@ -135,7 +135,7 @@ export function MemoryDetailView({
             dir="auto"
             className={`leading-relaxed ${isTextOnly ? "text-lg" : "text-base"} ${
               isDialogue
-                ? "border-r-2 border-primary/30 pr-3 bg-primary/5 rounded-l-md py-2"
+                ? "border-r-2 border-amber-300/60 pr-3 rounded-l-md py-2"
                 : ""
             }`}
           >
