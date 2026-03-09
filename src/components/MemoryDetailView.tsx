@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { X, Pencil, Trash2, Loader2, Mic, Volume2 } from "lucide-react";
@@ -112,27 +112,9 @@ export function MemoryDetailView({
         </div>
       )}
 
-      {/* Secondary images gallery */}
+      {/* Secondary images — horizontal scroll album */}
       {entry.entry_images && entry.entry_images.length > 0 && (
-        <div className={`grid gap-1 px-4 pt-4 ${
-          entry.entry_images.length === 1 ? "grid-cols-1" :
-          entry.entry_images.length === 2 ? "grid-cols-2" :
-          "grid-cols-2"
-        }`}>
-          {entry.entry_images
-            .sort((a, b) => a.sort_order - b.sort_order)
-            .map((img) => (
-              <div key={img.id} className="rounded-lg overflow-hidden bg-muted">
-                {img.thumbnail_url && (
-                  <img
-                    src={img.thumbnail_url}
-                    alt=""
-                    className="w-full aspect-square object-cover"
-                  />
-                )}
-              </div>
-            ))}
-        </div>
+        <ImageAlbum images={entry.entry_images.sort((a, b) => a.sort_order - b.sort_order)} />
       )}
 
       {/* Content */}
@@ -204,6 +186,56 @@ export function MemoryDetailView({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ImageAlbum({ images }: { images: { id: string; thumbnail_url: string | null }[] }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  const handleScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const scrollLeft = el.scrollLeft;
+    const width = el.clientWidth;
+    const index = Math.round(scrollLeft / width);
+    setActiveIndex(index);
+  }, []);
+
+  return (
+    <div className="relative">
+      <div
+        ref={scrollRef}
+        onScroll={handleScroll}
+        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {images.map((img) => (
+          <div key={img.id} className="w-full shrink-0 snap-center">
+            {img.thumbnail_url && (
+              <img
+                src={img.thumbnail_url}
+                alt=""
+                className="w-full aspect-square object-cover"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+      {/* Dot indicators */}
+      {images.length > 1 && (
+        <div className="flex justify-center gap-1.5 py-2">
+          {images.map((img, i) => (
+            <div
+              key={img.id}
+              className={`h-1.5 rounded-full transition-all ${
+                i === activeIndex ? "w-4 bg-foreground" : "w-1.5 bg-foreground/25"
+              }`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

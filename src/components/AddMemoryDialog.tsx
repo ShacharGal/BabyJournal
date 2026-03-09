@@ -414,9 +414,8 @@ export function AddMemoryDialog({
   };
 
   const uploadSecondaryImages = async (entryId: string, files: File[]) => {
-    for (let i = 0; i < files.length; i++) {
-      const f = files[i];
-      console.log("[AddMemory] Uploading secondary image:", f.name);
+    console.log("[AddMemory] Uploading", files.length, "secondary images in parallel");
+    await Promise.all(files.map(async (f, i) => {
       let driveFileId: string | undefined;
       if (selectedBaby?.drive_folder_id) {
         try {
@@ -426,7 +425,7 @@ export function AddMemoryDialog({
           });
           driveFileId = result.fileId;
         } catch (e) {
-          console.warn("[AddMemory] Secondary Drive upload failed:", e);
+          console.warn("[AddMemory] Secondary Drive upload failed:", f.name, e);
         }
       }
       const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${i}`);
@@ -437,7 +436,7 @@ export function AddMemoryDialog({
         file_name: f.name,
         sort_order: i,
       });
-    }
+    }));
   };
 
   const handleSecondaryImagesUpdate = async (entryId: string, entry: EntryWithTags) => {
@@ -458,8 +457,7 @@ export function AddMemoryDialog({
     if (secondaryFiles.length > 0) {
       const existingCount = (entry.entry_images?.length ?? 0) - removeSecondaryIds.length;
       const filesToUpload = secondaryFiles.slice(0, 4 - existingCount);
-      for (let i = 0; i < filesToUpload.length; i++) {
-        const f = filesToUpload[i];
+      await Promise.all(filesToUpload.map(async (f, i) => {
         let driveFileId: string | undefined;
         if (selectedBaby?.drive_folder_id) {
           try {
@@ -475,7 +473,7 @@ export function AddMemoryDialog({
           file_name: f.name,
           sort_order: existingCount + i,
         });
-      }
+      }));
     }
   };
 
