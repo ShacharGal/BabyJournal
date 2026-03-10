@@ -61,7 +61,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   } = useEntries(babyId);
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
-  const { canEdit } = useAuthContext();
+  const { canEdit, canAdd, user } = useAuthContext();
   const [detailEntry, setDetailEntry] = useState<EntryWithTags | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -342,7 +342,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
           entry={detailEntry}
           babyName={getBabyName(detailEntry.baby_id)}
           babyDob={getBabyDob(detailEntry.baby_id)}
-          canEdit={canEdit}
+          canEdit={canEdit || (canAdd && !!user && detailEntry.created_by === user.id)}
           onClose={() => setDetailEntry(null)}
           onEdit={(entry) => {
             setDetailEntry(null);
