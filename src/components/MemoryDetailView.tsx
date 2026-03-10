@@ -52,7 +52,7 @@ export function MemoryDetailView({
   const isTextOnly = !hasThumbnail && !canPlayVideo && !hasAudio;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/20 backdrop-blur-[15px] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
       {/* Top bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white/60 backdrop-blur-[12px] border-b border-white/80">
         <Button variant="ghost" size="icon" onClick={onClose}>
