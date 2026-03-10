@@ -493,6 +493,22 @@ export function AddMemoryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+        {isUploading && (
+          <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center pointer-events-auto">
+            <div className="absolute inset-0 bg-white/70 backdrop-blur-sm rounded-lg" />
+            <div className="relative flex flex-col items-center gap-3">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm font-medium text-foreground">
+                {uploadStatus || "Saving..."}
+              </p>
+              {(file?.type.startsWith("video/") || secondaryFiles.length > 0) && (
+                <p className="text-xs text-muted-foreground">
+                  This might take a moment...
+                </p>
+              )}
+            </div>
+          </div>
+        )}
         <DialogHeader>
           <DialogTitle>{isEditing ? "Edit Memory" : "Add Memory"}</DialogTitle>
           <DialogDescription>
