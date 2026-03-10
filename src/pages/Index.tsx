@@ -42,7 +42,7 @@ const Index = () => {
         <Button
           onClick={() => setAddDialogOpen(true)}
           size="icon"
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 h-14 w-14 rounded-full shadow-lg z-40"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 h-14 w-14 rounded-full shadow-lg z-40 bg-[#fbc00b] hover:bg-[#e5af0a] text-white border-0"
         >
           <Plus className="h-6 w-6" />
         </Button>

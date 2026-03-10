@@ -13,6 +13,24 @@ import type { Filters } from "@/components/SearchFilters";
 import { MemoryDetailView } from "@/components/MemoryDetailView";
 import { parseDialogueText } from "@/lib/dialogueParser";
 
+const EARTH_TONE_COLORS = [
+  "#e27a47", // Rust
+  "#848252", // Olive
+  "#7197d3", // Denim
+  "#cb857a", // Dusty Rose
+  "#8da38c", // Sage Green
+  "#cba358", // Ochre
+  "#9c7a8b", // Mauve
+];
+
+function getTagColor(tagName: string): string {
+  let hash = 0;
+  for (let i = 0; i < tagName.length; i++) {
+    hash = tagName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  return EARTH_TONE_COLORS[Math.abs(hash) % EARTH_TONE_COLORS.length];
+}
+
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
   const dob = new Date(dateOfBirth);
   const d = new Date(memoryDate);
@@ -365,14 +383,14 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
   const showSplit = hasMedia || hasAudioOnly;
 
   return (
-    <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
+    <div className="rounded-xl border bg-gradient-to-b from-[#ffe497] from-0% via-[#fffdfa] via-20% to-[#fffdfa] to-100% text-card-foreground shadow-md shadow-stone-200/50 overflow-hidden">
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-5 pt-4 pb-1">
-        <span className="text-xs font-medium text-zinc-500">
+        <span className="text-xs font-medium text-[#57534e]">
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-zinc-800">{babyName}</span>
+          <span className="text-xs font-medium text-[#353326]">{babyName}</span>
           {babyDob && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
               {formatAgeAtDate(babyDob, entry.date)}
@@ -430,7 +448,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
           {entry.description ? (
             <div
               dir="auto"
-              className={`text-sm text-zinc-800 whitespace-pre-wrap line-clamp-5 ${
+              className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-5 ${
                 isDialogue
                   ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
                   : ""
@@ -442,7 +460,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
               }
             </div>
           ) : (
-            <div className="text-sm text-zinc-500">No description</div>
+            <div className="text-sm text-[#57534e]">No description</div>
           )}
         </div>
       </div>
@@ -450,10 +468,10 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
       {/* Footer: LTR left (expand + contributor) — RTL right (tags) */}
       <div className="flex items-center justify-between px-5 pb-4 pt-1 gap-2">
         {/* Left side (LTR): Expand icon + contributor */}
-        <div className="flex items-center gap-2 text-zinc-400 shrink-0">
+        <div className="flex items-center gap-2 text-gray-500 shrink-0">
           <button
             onClick={() => onExpand(entry)}
-            className="p-1 hover:text-zinc-700 transition-colors"
+            className="p-1 hover:text-[#353326] transition-colors"
             title="Expand"
           >
             <Maximize2 className="h-3.5 w-3.5" />
@@ -468,19 +486,22 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
         {/* Right side (RTL): Tags */}
         {entry.entry_tags.length > 0 && (
           <div className="flex flex-wrap gap-1 justify-end min-w-0">
-            {entry.entry_tags.map((et) => (
-              <Badge
-                key={et.tag_id}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0"
-                style={{
-                  backgroundColor: `${et.tags.color}20`,
-                  color: et.tags.color || undefined,
-                }}
-              >
-                {et.tags.name}
-              </Badge>
-            ))}
+            {entry.entry_tags.map((et) => {
+              const bgColor = getTagColor(et.tags.name);
+              return (
+                <Badge
+                  key={et.tag_id}
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0 font-medium border-0"
+                  style={{
+                    backgroundColor: bgColor,
+                    color: "#ffffff",
+                  }}
+                >
+                  {et.tags.name}
+                </Badge>
+              );
+            })}
           </div>
         )}
       </div>
