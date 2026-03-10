@@ -383,7 +383,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
   const showSplit = hasMedia || hasAudioOnly;
 
   return (
-    <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden">
+    <div className="rounded-xl border border-white/80 bg-white/45 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden">
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-6 pt-5 pb-1">
         <span className="text-[11px] font-medium text-stone-400">
@@ -392,7 +392,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
         <div className="flex items-center gap-1.5">
           <span className="text-[11px] font-medium text-stone-500">{babyName}</span>
           {babyDob && (
-            <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-white/70 text-stone-500 border-0">
               {formatAgeAtDate(babyDob, entry.date)}
             </Badge>
           )}
