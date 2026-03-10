@@ -230,7 +230,7 @@ function ImageAlbum({ images }: { images: { id: string; url: string }[] }) {
             <img
               src={img.url}
               alt=""
-              className="w-full aspect-square object-cover"
+              className="w-full max-h-[70vh] object-contain"
             />
           </div>
         ))}
