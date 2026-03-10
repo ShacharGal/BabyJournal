@@ -17,17 +17,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBabies } from "@/hooks/useBabies";
-import { useCreateEntry, useUpdateEntry, type EntryWithTags, type EntryInsert } from "@/hooks/useEntries";
+import { useCreateEntry, useUpdateEntry, type EntryWithTags } from "@/hooks/useEntries";
 import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hooks/useGoogleDrive";
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Upload, Loader2, X, Image, Video, Mic, FileText, Save, Square, Circle, Paperclip, Quote, Plus } from "lucide-react";
-import { generateAndUploadThumbnail, deleteThumbnail, uploadBase64Thumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
+import { generateAndUploadThumbnail, deleteThumbnail, generateVideoThumbnail } from "@/lib/thumbnails";
 import { uploadAudio, deleteAudio } from "@/lib/audioUpload";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { extractDateFromFile } from "@/lib/exifDate";
 import { supabase } from "@/integrations/supabase/client";
+import { APP_VERSION } from "@/main";
 
 const typeIcons = {
   photo: Image,
@@ -69,6 +70,7 @@ export function AddMemoryDialog({
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [removeExistingAudio, setRemoveExistingAudio] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>("");
   const [removeExistingFile, setRemoveExistingFile] = useState(false);
 
   const recorder = useAudioRecorder();
@@ -152,6 +154,7 @@ export function AddMemoryDialog({
     setPostType("standard");
     setRemoveExistingFile(false);
     setRemoveExistingAudio(false);
+    setUploadStatus("");
     setDate(new Date().toISOString().split("T")[0]);
     if (fileInputRef.current) fileInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
@@ -165,6 +168,65 @@ export function AddMemoryDialog({
       return new File([recorder.blob], `recording-${Date.now()}.webm`, { type: "audio/webm" });
     }
     return null;
+  };
+
+  /** Upload primary file to Drive + generate thumbnail. Returns { driveFileId, thumbUrl } */
+  const uploadPrimaryFile = async (f: File, entryId: string, folderId: string | null): Promise<{ driveFileId: string | null; thumbUrl: string | null }> => {
+    let driveFileId: string | null = null;
+    let thumbUrl: string | null = null;
+
+    // Upload to Drive
+    if (folderId) {
+      setUploadStatus(f.type.startsWith("video/") ? "Uploading video..." : "Uploading photo...");
+      const result = await uploadToDrive.mutateAsync({ file: f, folderId });
+      driveFileId = result.fileId;
+      console.log("[AddMemory] Drive upload complete:", driveFileId);
+    }
+
+    // Generate thumbnail
+    setUploadStatus("Generating thumbnail...");
+    if (f.type.startsWith("image/")) {
+      thumbUrl = await generateAndUploadThumbnail(f, entryId);
+    } else if (f.type.startsWith("video/")) {
+      thumbUrl = await generateVideoThumbnail(f, entryId);
+    }
+
+    return { driveFileId, thumbUrl };
+  };
+
+  /** Upload audio file to Supabase storage. Returns { storagePath, publicUrl } */
+  const uploadAudioFile = async (audioF: File, entryId: string) => {
+    setUploadStatus("Uploading audio...");
+    return await uploadAudio(audioF, entryId);
+  };
+
+  /** Upload secondary images in parallel. */
+  const uploadSecondaryImagesInline = async (entryId: string, files: File[], folderId: string | null, startIndex: number) => {
+    const total = files.length;
+    let completed = 0;
+    console.log("[AddMemory] Uploading", total, "secondary images in parallel");
+
+    await Promise.all(files.map(async (f, i) => {
+      let driveFileId: string | undefined;
+      if (folderId) {
+        try {
+          const result = await uploadToDrive.mutateAsync({ file: f, folderId });
+          driveFileId = result.fileId;
+        } catch (e) {
+          console.warn("[AddMemory] Secondary Drive upload failed:", f.name, e);
+        }
+      }
+      const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${startIndex + i}`);
+      await supabase.from("entry_images").insert({
+        entry_id: entryId,
+        drive_file_id: driveFileId || null,
+        thumbnail_url: thumbUrl,
+        file_name: f.name,
+        sort_order: startIndex + i,
+      });
+      completed++;
+      setUploadStatus(`Uploading additional photos (${completed}/${total})...`);
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -185,7 +247,7 @@ export function AddMemoryDialog({
       return;
     }
 
-    // Capture form values before resetting
+    // Capture form values before any async work
     const formData = {
       babyId: selectedBabyId,
       description: description.trim() || null,
@@ -202,186 +264,198 @@ export function AddMemoryDialog({
     };
 
     setIsUploading(true);
+    setUploadStatus("Saving...");
 
     try {
       if (isEditing) {
-        // Update metadata immediately (fast)
-        const entryUpdate: Partial<EntryInsert> = {
-          baby_id: formData.babyId,
-          description: formData.description,
-          date: formData.date,
-          post_type: formData.postType,
-        };
-
-        if (formData.removeExistingFile && !formData.file) {
-          entryUpdate.type = "text";
-          entryUpdate.drive_file_id = null;
-          entryUpdate.file_name = null;
-          entryUpdate.file_size = null;
-          entryUpdate.mime_type = null;
-          entryUpdate.thumbnail_url = null;
-        }
-
-        await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: formData.tags });
-
-        // Generate thumbnail for new file before closing dialog
-        if (formData.file) {
-          let thumbUrl: string | null = null;
-          if (formData.file.type.startsWith("image/")) {
-            thumbUrl = await generateAndUploadThumbnail(formData.file, editEntry.id);
-          } else if (formData.file.type.startsWith("video/")) {
-            thumbUrl = await generateVideoThumbnail(formData.file, editEntry.id);
-          }
-          if (thumbUrl) {
-            await updateEntry.mutateAsync({ entryId: editEntry.id, entry: { thumbnail_url: thumbUrl } });
-          }
-        }
-
-        // Close dialog
-        resetForm();
-        onOpenChange(false);
-        toast({ title: "Saving...", description: "Uploading files in the background." });
-
-        // Background: handle file uploads (thumbnail already done)
-        const editEntrySnapshot = { ...editEntry };
-        backgroundUpload(async () => {
-          const hadFile = !!editEntrySnapshot.drive_file_id || !!editEntrySnapshot.file_name;
-          if (hadFile && (formData.file || formData.removeExistingFile)) {
-            if (editEntrySnapshot.drive_file_id) {
-              try { await deleteFromDrive.mutateAsync(editEntrySnapshot.drive_file_id); } catch (e) { console.warn(e); }
-            }
-            if (!formData.file) {
-              try { await deleteThumbnail(editEntrySnapshot.id); } catch (e) { console.warn(e); }
-            }
-          }
-
-          if (formData.file) {
-            let driveFileId: string | undefined;
-            if (formData.folderId) {
-              const result = await uploadToDrive.mutateAsync({ file: formData.file, folderId: formData.folderId });
-              driveFileId = result.fileId;
-            }
-            await updateEntry.mutateAsync({
-              entryId: editEntrySnapshot.id,
-              entry: {
-                type: getFileType(formData.file.type),
-                drive_file_id: driveFileId || null,
-                file_name: formData.file.name,
-                file_size: formData.file.size,
-                mime_type: formData.file.type,
-              },
-            });
-          }
-
-          await handleAudioUpdateBg(editEntrySnapshot.id, editEntrySnapshot, formData.effectiveAudio, formData.removeExistingAudio);
-          await handleSecondaryImagesUpdateBg(editEntrySnapshot.id, editEntrySnapshot, formData.secondaryFiles, formData.removeSecondaryIds, formData.folderId);
-        });
+        await handleEditSubmit(formData);
       } else {
-        // Create new entry (fast DB insert)
-        let entryType: "photo" | "video" | "audio" | "text" = "text";
-        if (formData.file) entryType = getFileType(formData.file.type);
-
-        const newEntry = await createEntry.mutateAsync({
-          entry: {
-            baby_id: formData.babyId,
-            type: entryType,
-            post_type: formData.postType,
-            description: formData.description,
-            date: formData.date,
-            file_name: formData.file?.name,
-            file_size: formData.file?.size,
-            mime_type: formData.file?.type,
-            created_by: user?.id,
-          } as any,
-          tagIds: formData.tags,
-        });
-
-        // Generate thumbnail before closing dialog (fast local operation)
-        if (formData.file && newEntry?.id) {
-          let thumbUrl: string | null = null;
-          if (formData.file.type.startsWith("image/")) {
-            thumbUrl = await generateAndUploadThumbnail(formData.file, newEntry.id);
-          } else if (formData.file.type.startsWith("video/")) {
-            thumbUrl = await generateVideoThumbnail(formData.file, newEntry.id);
-          }
-          if (thumbUrl) {
-            await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { thumbnail_url: thumbUrl } });
-          }
-        }
-
-        // Close dialog
-        resetForm();
-        onOpenChange(false);
-        toast({ title: "Saving...", description: "Uploading files in the background." });
-
-        // Background: Drive upload, audio, secondary images
-        if (newEntry?.id) {
-          backgroundUpload(async () => {
-            if (formData.file && formData.folderId) {
-              try {
-                const result = await uploadToDrive.mutateAsync({ file: formData.file, folderId: formData.folderId });
-                await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { drive_file_id: result.fileId } });
-              } catch (e) {
-                console.error("[AddMemory] Background Drive upload failed:", e);
-              }
-            }
-
-            // Audio
-            if (formData.effectiveAudio) {
-              const { storagePath, publicUrl } = await uploadAudio(formData.effectiveAudio, newEntry.id);
-              await updateEntry.mutateAsync({
-                entryId: newEntry.id,
-                entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: formData.effectiveAudio.name, audio_file_size: formData.effectiveAudio.size } as any,
-              });
-            }
-
-            // Secondary images
-            if (formData.secondaryFiles.length > 0) {
-              await uploadSecondaryImages(newEntry.id, formData.secondaryFiles);
-            }
-          });
-        }
+        await handleCreateSubmit(formData);
       }
+
+      // All uploads done — close dialog
+      setUploadStatus("Finishing up...");
+      resetForm();
+      onOpenChange(false);
+      toast({ title: "Memory saved!", description: "All files uploaded successfully." });
     } catch (error: unknown) {
+      console.error("[AddMemory] Upload error:", error);
       toast({
         title: "Error",
         description: error instanceof Error ? error.message : "Failed to save memory",
         variant: "destructive",
       });
-      resetForm();
-      onOpenChange(false);
     } finally {
       setIsUploading(false);
+      setUploadStatus("");
     }
   };
 
-  /** Run upload work in the background, show toast on completion/failure */
-  const backgroundUpload = (work: () => Promise<void>) => {
-    work()
-      .then(() => {
-        toast({ title: "Memory saved!", description: "All files uploaded successfully." });
-      })
-      .catch((err) => {
-        console.error("[AddMemory] Background upload error:", err);
-        toast({ title: "Upload issue", description: err?.message || "Some files may not have uploaded.", variant: "destructive" });
-      });
+  const handleCreateSubmit = async (formData: {
+    babyId: string;
+    description: string | null;
+    date: string;
+    postType: string;
+    tags: string[];
+    file: File | null;
+    effectiveAudio: File | null;
+    secondaryFiles: File[];
+    folderId: string | null;
+  }) => {
+    let entryType: "photo" | "video" | "audio" | "text" = "text";
+    if (formData.file) entryType = getFileType(formData.file.type);
+
+    // 1. Create entry in DB
+    setUploadStatus("Creating entry...");
+    const newEntry = await createEntry.mutateAsync({
+      entry: {
+        baby_id: formData.babyId,
+        type: entryType,
+        post_type: formData.postType,
+        description: formData.description,
+        date: formData.date,
+        file_name: formData.file?.name,
+        file_size: formData.file?.size,
+        mime_type: formData.file?.type,
+        created_by: user?.id,
+        app_version: APP_VERSION,
+      } as any,
+      tagIds: formData.tags,
+    });
+
+    if (!newEntry?.id) throw new Error("Failed to create entry");
+
+    // 2. Run uploads in parallel
+    const uploads: Promise<void>[] = [];
+
+    // Primary file: Drive upload + thumbnail
+    if (formData.file) {
+      uploads.push(
+        uploadPrimaryFile(formData.file, newEntry.id, formData.folderId).then(async ({ driveFileId, thumbUrl }) => {
+          await updateEntry.mutateAsync({
+            entryId: newEntry.id,
+            entry: {
+              drive_file_id: driveFileId,
+              thumbnail_url: thumbUrl,
+            },
+          });
+        })
+      );
+    }
+
+    // Audio
+    if (formData.effectiveAudio) {
+      uploads.push(
+        uploadAudioFile(formData.effectiveAudio, newEntry.id).then(async ({ storagePath, publicUrl }) => {
+          await updateEntry.mutateAsync({
+            entryId: newEntry.id,
+            entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: formData.effectiveAudio!.name, audio_file_size: formData.effectiveAudio!.size } as any,
+          });
+        })
+      );
+    }
+
+    // Secondary images
+    if (formData.secondaryFiles.length > 0) {
+      uploads.push(
+        uploadSecondaryImagesInline(newEntry.id, formData.secondaryFiles, formData.folderId, 0)
+      );
+    }
+
+    if (uploads.length > 0) {
+      await Promise.all(uploads);
+    }
   };
 
-  const handleAudioUpdateBg = async (entryId: string, entry: EntryWithTags, effectiveAudio: File | null, shouldRemove: boolean) => {
+  const handleEditSubmit = async (formData: {
+    babyId: string;
+    description: string | null;
+    date: string;
+    postType: string;
+    tags: string[];
+    file: File | null;
+    effectiveAudio: File | null;
+    secondaryFiles: File[];
+    removeExistingFile: boolean;
+    removeExistingAudio: boolean;
+    removeSecondaryIds: string[];
+    folderId: string | null;
+  }) => {
+    const entry = editEntry!;
+
+    // 1. Update metadata
+    setUploadStatus("Updating entry...");
+    const entryUpdate: Record<string, any> = {
+      baby_id: formData.babyId,
+      description: formData.description,
+      date: formData.date,
+      post_type: formData.postType,
+      app_version: APP_VERSION,
+    };
+
+    if (formData.removeExistingFile && !formData.file) {
+      entryUpdate.type = "text";
+      entryUpdate.drive_file_id = null;
+      entryUpdate.file_name = null;
+      entryUpdate.file_size = null;
+      entryUpdate.mime_type = null;
+      entryUpdate.thumbnail_url = null;
+    }
+
+    await updateEntry.mutateAsync({ entryId: entry.id, entry: entryUpdate, tagIds: formData.tags });
+
+    // 2. Handle file changes
+    const hadFile = !!entry.drive_file_id || !!entry.file_name;
+
+    // Delete old file from Drive if replacing or removing
+    if (hadFile && (formData.file || formData.removeExistingFile)) {
+      if (entry.drive_file_id) {
+        try { await deleteFromDrive.mutateAsync(entry.drive_file_id); } catch (e) { console.warn(e); }
+      }
+      if (!formData.file) {
+        try { await deleteThumbnail(entry.id); } catch (e) { console.warn(e); }
+      }
+    }
+
+    // Upload new primary file
+    if (formData.file) {
+      const { driveFileId, thumbUrl } = await uploadPrimaryFile(formData.file, entry.id, formData.folderId);
+      await updateEntry.mutateAsync({
+        entryId: entry.id,
+        entry: {
+          type: getFileType(formData.file.type),
+          drive_file_id: driveFileId || null,
+          file_name: formData.file.name,
+          file_size: formData.file.size,
+          mime_type: formData.file.type,
+          thumbnail_url: thumbUrl,
+        },
+      });
+    }
+
+    // 3. Handle audio
+    await handleAudioUpdate(entry.id, entry, formData.effectiveAudio, formData.removeExistingAudio);
+
+    // 4. Handle secondary images
+    await handleSecondaryImagesUpdate(entry.id, entry, formData.secondaryFiles, formData.removeSecondaryIds, formData.folderId);
+  };
+
+  const handleAudioUpdate = async (entryId: string, entry: EntryWithTags, effectiveAudio: File | null, shouldRemove: boolean) => {
     const hadAudio = !!(entry as any).audio_storage_path;
     if (hadAudio && (effectiveAudio || shouldRemove)) {
       try { await deleteAudio((entry as any).audio_storage_path); } catch (e) { console.warn(e); }
     }
     if (effectiveAudio) {
-      const { storagePath, publicUrl } = await uploadAudio(effectiveAudio, entryId);
+      const { storagePath, publicUrl } = await uploadAudioFile(effectiveAudio, entryId);
       await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: effectiveAudio.name, audio_file_size: effectiveAudio.size } as any });
     } else if (shouldRemove && hadAudio) {
       await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: null, audio_url: null, audio_file_name: null, audio_file_size: null } as any });
     }
   };
 
-  const handleSecondaryImagesUpdateBg = async (entryId: string, entry: EntryWithTags, newFiles: File[], removeIds: string[], folderId: string | null) => {
+  const handleSecondaryImagesUpdate = async (entryId: string, entry: EntryWithTags, newFiles: File[], removeIds: string[], folderId: string | null) => {
     if (removeIds.length > 0) {
+      setUploadStatus("Removing images...");
       for (const imgId of removeIds) {
         const img = entry.entry_images?.find((ei) => ei.id === imgId);
         if (img?.drive_file_id) { try { await deleteFromDrive.mutateAsync(img.drive_file_id); } catch (e) { console.warn(e); } }
@@ -391,42 +465,8 @@ export function AddMemoryDialog({
     if (newFiles.length > 0) {
       const existingCount = (entry.entry_images?.length ?? 0) - removeIds.length;
       const filesToUpload = newFiles.slice(0, 4 - existingCount);
-      await Promise.all(filesToUpload.map(async (f, i) => {
-        let driveFileId: string | undefined;
-        if (folderId) {
-          try { const r = await uploadToDrive.mutateAsync({ file: f, folderId }); driveFileId = r.fileId; } catch (e) { console.warn(e); }
-        }
-        const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${existingCount + i}`);
-        await supabase.from("entry_images").insert({ entry_id: entryId, drive_file_id: driveFileId || null, thumbnail_url: thumbUrl, file_name: f.name, sort_order: existingCount + i });
-      }));
+      await uploadSecondaryImagesInline(entryId, filesToUpload, folderId, existingCount);
     }
-  };
-
-
-  const uploadSecondaryImages = async (entryId: string, files: File[]) => {
-    console.log("[AddMemory] Uploading", files.length, "secondary images in parallel");
-    await Promise.all(files.map(async (f, i) => {
-      let driveFileId: string | undefined;
-      if (selectedBaby?.drive_folder_id) {
-        try {
-          const result = await uploadToDrive.mutateAsync({
-            file: f,
-            folderId: selectedBaby.drive_folder_id,
-          });
-          driveFileId = result.fileId;
-        } catch (e) {
-          console.warn("[AddMemory] Secondary Drive upload failed:", f.name, e);
-        }
-      }
-      const thumbUrl = await generateAndUploadThumbnail(f, `${entryId}-secondary-${i}`);
-      await supabase.from("entry_images").insert({
-        entry_id: entryId,
-        drive_file_id: driveFileId || null,
-        thumbnail_url: thumbUrl,
-        file_name: f.name,
-        sort_order: i,
-      });
-    }));
   };
 
 
@@ -988,7 +1028,7 @@ export function AddMemoryDialog({
             {isUploading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                {isEditing ? "Updating..." : "Saving..."}
+                {uploadStatus || "Saving..."}
               </>
             ) : (
               <>

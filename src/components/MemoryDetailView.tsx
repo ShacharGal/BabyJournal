@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Pencil, Trash2, Loader2, Mic, Volume2 } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
+import { driveStreamUrl } from "@/lib/driveStreamUrl";
 import type { EntryWithTags } from "@/hooks/useEntries";
 
 function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
@@ -45,11 +46,16 @@ export function MemoryDetailView({
 }: MemoryDetailViewProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
+  const isPhoto = entry.type === "photo";
   const isVideo = entry.type === "video";
   const canPlayVideo = isVideo && !!entry.drive_file_id;
   const hasAudio = !!audioUrl;
   const isDialogue = (entry as any).post_type === "dialogue";
-  const isTextOnly = !hasThumbnail && !canPlayVideo && !hasAudio;
+  // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
+  const heroImageUrl = entry.thumbnail_url
+    || (isPhoto && entry.drive_file_id ? driveStreamUrl(entry.drive_file_id) : null);
+  const hasHeroImage = !!heroImageUrl;
+  const isTextOnly = !hasHeroImage && !canPlayVideo && !hasAudio;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
@@ -89,13 +95,15 @@ export function MemoryDetailView({
       {(() => {
         // Build unified album: hero image first, then secondary images
         const albumImages: { id: string; url: string }[] = [];
-        if (hasThumbnail && !canPlayVideo) {
-          albumImages.push({ id: "hero", url: entry.thumbnail_url! });
+        if (hasHeroImage && !canPlayVideo) {
+          albumImages.push({ id: "hero", url: heroImageUrl! });
         }
         if (entry.entry_images) {
           for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
-            if (img.thumbnail_url) {
-              albumImages.push({ id: img.id, url: img.thumbnail_url });
+            const imgUrl = img.thumbnail_url
+              || (img.drive_file_id ? driveStreamUrl(img.drive_file_id) : null);
+            if (imgUrl) {
+              albumImages.push({ id: img.id, url: imgUrl });
             }
           }
         }

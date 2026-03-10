@@ -12,6 +12,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
 import { MemoryDetailView } from "@/components/MemoryDetailView";
 import { parseDialogueText } from "@/lib/dialogueParser";
+import { driveStreamUrl } from "@/lib/driveStreamUrl";
 
 const EARTH_TONE_COLORS = [
   "#e27a47", // Rust
@@ -373,12 +374,17 @@ interface MemoryCardProps {
 function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCardProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
+  const isPhoto = entry.type === "photo";
   const isVideo = entry.type === "video";
   const hasAudio = !!audioUrl;
   const isDialogue = (entry as any).post_type === "dialogue";
 
+  // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
+  const displayImageUrl = entry.thumbnail_url
+    || (isPhoto && entry.drive_file_id ? driveStreamUrl(entry.drive_file_id) : null);
+
   // Determine body scenario
-  const hasMedia = hasThumbnail || (isVideo && !!entry.drive_file_id);
+  const hasMedia = !!displayImageUrl || (isVideo && !!entry.drive_file_id);
   const hasAudioOnly = !hasMedia && hasAudio;
   const showSplit = hasMedia || hasAudioOnly;
 
@@ -405,9 +411,9 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
         {hasMedia && (
           <div className="w-[35%] shrink-0">
             <div className="relative w-full overflow-hidden rounded-lg" style={{ aspectRatio: "4/5" }}>
-              {hasThumbnail ? (
+              {displayImageUrl ? (
                 <img
-                  src={entry.thumbnail_url!}
+                  src={displayImageUrl}
                   alt=""
                   className="w-full h-full object-cover"
                 />
@@ -420,7 +426,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
                 </div>
               )}
               {/* Video indicator overlay */}
-              {isVideo && hasThumbnail && (
+              {isVideo && displayImageUrl && (
                 <div className="absolute bottom-1 right-1 bg-black/60 rounded px-1 py-0.5">
                   <span className="text-[9px] text-white font-medium">VIDEO</span>
                 </div>
