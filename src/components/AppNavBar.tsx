@@ -34,6 +34,7 @@ import { AddChildForm } from "@/components/AddChildForm";
 import { UserManagement } from "@/components/UserManagement";
 import { SearchFilters, type Filters } from "@/components/SearchFilters";
 import { useGoogleConnection } from "@/hooks/useGoogleDrive";
+import { APP_VERSION } from "@/main";
 
 interface AppNavBarProps {
   selectedBabyId?: string;
@@ -78,6 +79,7 @@ export function AppNavBar({
             <div className="flex items-center gap-2 shrink-0">
               <Heart className="h-5 w-5 text-primary" />
               <span className="font-semibold text-base hidden sm:inline">Family Journal</span>
+              <span className="text-[10px] text-muted-foreground">v{APP_VERSION}</span>
             </div>
 
             <DropdownMenu>
