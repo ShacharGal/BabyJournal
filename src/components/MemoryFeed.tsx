@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Heart, Calendar, Maximize2, Volume2, ChevronLeft, ChevronRight,
+  Loader2, Heart, Calendar, Maximize2, Volume2, ChevronLeft, ChevronRight, User,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -447,37 +447,42 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
         </div>
       </div>
 
-      {/* Footer: Expand icon (left/start) — Contributor + Tags (right/end) */}
-      <div className="flex items-end justify-between px-5 pb-4 pt-1 gap-2">
-        <button
-          onClick={() => onExpand(entry)}
-          className="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
-          title="Expand"
-        >
-          <Maximize2 className="h-3.5 w-3.5" />
-        </button>
-        <div className="flex items-center gap-2 min-w-0">
-          {entry.entry_tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 justify-end min-w-0">
-              {entry.entry_tags.map((et) => (
-                <Badge
-                  key={et.tag_id}
-                  variant="secondary"
-                  className="text-[10px] px-1.5 py-0"
-                  style={{
-                    backgroundColor: `${et.tags.color}20`,
-                    color: et.tags.color || undefined,
-                  }}
-                >
-                  {et.tags.name}
-                </Badge>
-              ))}
+      {/* Footer: LTR left (expand + contributor) — RTL right (tags) */}
+      <div className="flex items-center justify-between px-5 pb-4 pt-1 gap-2">
+        {/* Left side (LTR): Expand icon + contributor */}
+        <div className="flex items-center gap-2 text-zinc-400 shrink-0">
+          <button
+            onClick={() => onExpand(entry)}
+            className="p-1 hover:text-zinc-700 transition-colors"
+            title="Expand"
+          >
+            <Maximize2 className="h-3.5 w-3.5" />
+          </button>
+          {entry.created_by_nickname && (
+            <div className="flex items-center gap-1 text-xs">
+              <User className="h-3.5 w-3.5" />
+              <span>{entry.created_by_nickname}</span>
             </div>
           )}
-          <div className="text-xs text-zinc-500 shrink-0">
-            {entry.created_by_nickname ? `Added by ${entry.created_by_nickname}` : "\u00A0"}
-          </div>
         </div>
+        {/* Right side (RTL): Tags */}
+        {entry.entry_tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 justify-end min-w-0">
+            {entry.entry_tags.map((et) => (
+              <Badge
+                key={et.tag_id}
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0"
+                style={{
+                  backgroundColor: `${et.tags.color}20`,
+                  color: et.tags.color || undefined,
+                }}
+              >
+                {et.tags.name}
+              </Badge>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
