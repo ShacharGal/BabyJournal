@@ -224,12 +224,25 @@ export function AddMemoryDialog({
 
         await updateEntry.mutateAsync({ entryId: editEntry.id, entry: entryUpdate, tagIds: formData.tags });
 
-        // Close dialog immediately
+        // Generate thumbnail for new file before closing dialog
+        if (formData.file) {
+          let thumbUrl: string | null = null;
+          if (formData.file.type.startsWith("image/")) {
+            thumbUrl = await generateAndUploadThumbnail(formData.file, editEntry.id);
+          } else if (formData.file.type.startsWith("video/")) {
+            thumbUrl = await generateVideoThumbnail(formData.file, editEntry.id);
+          }
+          if (thumbUrl) {
+            await updateEntry.mutateAsync({ entryId: editEntry.id, entry: { thumbnail_url: thumbUrl } });
+          }
+        }
+
+        // Close dialog
         resetForm();
         onOpenChange(false);
         toast({ title: "Saving...", description: "Uploading files in the background." });
 
-        // Background: handle file uploads
+        // Background: handle file uploads (thumbnail already done)
         const editEntrySnapshot = { ...editEntry };
         backgroundUpload(async () => {
           const hadFile = !!editEntrySnapshot.drive_file_id || !!editEntrySnapshot.file_name;
@@ -237,16 +250,16 @@ export function AddMemoryDialog({
             if (editEntrySnapshot.drive_file_id) {
               try { await deleteFromDrive.mutateAsync(editEntrySnapshot.drive_file_id); } catch (e) { console.warn(e); }
             }
-            try { await deleteThumbnail(editEntrySnapshot.id); } catch (e) { console.warn(e); }
+            if (!formData.file) {
+              try { await deleteThumbnail(editEntrySnapshot.id); } catch (e) { console.warn(e); }
+            }
           }
 
           if (formData.file) {
             let driveFileId: string | undefined;
-            let driveThumbData: string | undefined;
             if (formData.folderId) {
               const result = await uploadToDrive.mutateAsync({ file: formData.file, folderId: formData.folderId });
               driveFileId = result.fileId;
-              driveThumbData = result.thumbnailData ?? undefined;
             }
             await updateEntry.mutateAsync({
               entryId: editEntrySnapshot.id,
@@ -258,17 +271,6 @@ export function AddMemoryDialog({
                 mime_type: formData.file.type,
               },
             });
-
-            let thumbUrl: string | null = null;
-            if (formData.file.type.startsWith("image/")) {
-              thumbUrl = await generateAndUploadThumbnail(formData.file, editEntrySnapshot.id);
-            } else if (formData.file.type.startsWith("video/")) {
-              if (driveThumbData) thumbUrl = await uploadBase64Thumbnail(driveThumbData, editEntrySnapshot.id);
-              if (!thumbUrl) thumbUrl = await generateVideoThumbnail(formData.file, editEntrySnapshot.id);
-            }
-            if (thumbUrl) {
-              await updateEntry.mutateAsync({ entryId: editEntrySnapshot.id, entry: { thumbnail_url: thumbUrl } });
-            }
           }
 
           await handleAudioUpdateBg(editEntrySnapshot.id, editEntrySnapshot, formData.effectiveAudio, formData.removeExistingAudio);
@@ -294,39 +296,33 @@ export function AddMemoryDialog({
           tagIds: formData.tags,
         });
 
-        // Close dialog immediately
+        // Generate thumbnail before closing dialog (fast local operation)
+        if (formData.file && newEntry?.id) {
+          let thumbUrl: string | null = null;
+          if (formData.file.type.startsWith("image/")) {
+            thumbUrl = await generateAndUploadThumbnail(formData.file, newEntry.id);
+          } else if (formData.file.type.startsWith("video/")) {
+            thumbUrl = await generateVideoThumbnail(formData.file, newEntry.id);
+          }
+          if (thumbUrl) {
+            await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { thumbnail_url: thumbUrl } });
+          }
+        }
+
+        // Close dialog
         resetForm();
         onOpenChange(false);
         toast({ title: "Saving...", description: "Uploading files in the background." });
 
-        // Background: upload files and update entry
+        // Background: Drive upload, audio, secondary images
         if (newEntry?.id) {
           backgroundUpload(async () => {
-            // Drive upload
-            let driveFileId: string | undefined;
-            let driveThumbData: string | undefined;
             if (formData.file && formData.folderId) {
               try {
                 const result = await uploadToDrive.mutateAsync({ file: formData.file, folderId: formData.folderId });
-                driveFileId = result.fileId;
-                driveThumbData = result.thumbnailData ?? undefined;
-                await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { drive_file_id: driveFileId } });
+                await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { drive_file_id: result.fileId } });
               } catch (e) {
                 console.error("[AddMemory] Background Drive upload failed:", e);
-              }
-            }
-
-            // Thumbnail
-            if (formData.file) {
-              let thumbUrl: string | null = null;
-              if (formData.file.type.startsWith("image/")) {
-                thumbUrl = await generateAndUploadThumbnail(formData.file, newEntry.id);
-              } else if (formData.file.type.startsWith("video/")) {
-                if (driveThumbData) thumbUrl = await uploadBase64Thumbnail(driveThumbData, newEntry.id);
-                if (!thumbUrl) thumbUrl = await generateVideoThumbnail(formData.file, newEntry.id);
-              }
-              if (thumbUrl) {
-                await updateEntry.mutateAsync({ entryId: newEntry.id, entry: { thumbnail_url: thumbUrl } });
               }
             }
 
