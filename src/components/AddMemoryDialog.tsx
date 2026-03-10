@@ -492,11 +492,10 @@ export function AddMemoryDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
+      <DialogContent className={`w-[calc(100vw-2rem)] max-w-md relative ${isUploading ? "overflow-hidden" : ""}`}>
         {isUploading && (
-          <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center pointer-events-auto">
-            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-lg" />
-            <div className="relative flex flex-col items-center gap-3 mt-16">
+          <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center pointer-events-auto bg-black/50 backdrop-blur-sm rounded-lg">
+            <div className="flex flex-col items-center gap-3">
               <Loader2 className="h-8 w-8 animate-spin text-white" />
               <p className="text-sm font-medium text-white">
                 {uploadStatus || "Saving..."}
