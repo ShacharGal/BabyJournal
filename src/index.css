@@ -100,7 +100,15 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background:
+      radial-gradient(ellipse at 0% 0%, hsla(30, 80%, 92%, 0.8) 0%, transparent 50%),
+      radial-gradient(ellipse at 100% 0%, hsla(280, 40%, 88%, 0.7) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 50%, hsla(350, 60%, 90%, 0.6) 0%, transparent 50%),
+      radial-gradient(ellipse at 20% 100%, hsla(20, 80%, 90%, 0.8) 0%, transparent 50%),
+      hsl(30, 50%, 95%);
+    background-attachment: fixed;
+    min-height: 100vh;
   }
 }
 

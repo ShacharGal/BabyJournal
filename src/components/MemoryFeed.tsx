@@ -244,7 +244,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     <>
       {/* Sticky month/year header */}
       {filteredEntries.length > 0 && (
-        <div className="sticky top-14 z-30 flex items-center justify-center py-1.5 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b">
+        <div className="sticky top-14 z-30 flex items-center justify-center py-1.5 bg-white/60 backdrop-blur-[12px] border-b border-white/80">
           <button
             onClick={() => setMonthPickerOpen(!monthPickerOpen)}
             className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1 rounded-full hover:bg-accent"
@@ -258,7 +258,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
       {/* Calendar grid picker */}
       {monthPickerOpen && (
         <div className="sticky top-[6.5rem] z-30 flex justify-center">
-          <div className="bg-popover border rounded-lg shadow-lg p-3 w-64">
+          <div className="bg-white/70 backdrop-blur-[12px] border border-white/80 rounded-lg shadow-lg p-3 w-64">
             {/* Year selector with arrows */}
             <div className="flex items-center justify-between mb-3">
               <button
@@ -383,14 +383,14 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
   const showSplit = hasMedia || hasAudioOnly;
 
   return (
-    <div className="rounded-xl border bg-gradient-to-b from-[#ffe497] from-0% via-[#fffdfa] via-20% to-[#fffdfa] to-100% text-card-foreground shadow-md shadow-stone-200/50 overflow-hidden">
+    <div className="rounded-xl border border-white/80 bg-white/60 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden">
       {/* Header (LTR): Date left, Name + Age right */}
-      <div className="flex items-center justify-between px-5 pt-4 pb-1">
-        <span className="text-xs font-medium text-[#57534e]">
+      <div className="flex items-center justify-between px-6 pt-5 pb-1">
+        <span className="text-[11px] font-medium text-stone-400">
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="text-xs font-medium text-[#353326]">{babyName}</span>
+          <span className="text-[11px] font-medium text-stone-500">{babyName}</span>
           {babyDob && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
               {formatAgeAtDate(babyDob, entry.date)}
@@ -400,7 +400,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
       </div>
 
       {/* Body: optional media (left) + text (right) */}
-      <div className={`px-5 py-3 ${showSplit ? "flex gap-3" : ""}`}>
+      <div className={`px-6 py-4 ${showSplit ? "flex gap-3" : ""}`}>
         {/* Media container — left side, 35% width */}
         {hasMedia && (
           <div className="w-[35%] shrink-0">
@@ -466,12 +466,12 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
       </div>
 
       {/* Footer: LTR left (expand + contributor) — RTL right (tags) */}
-      <div className="flex items-center justify-between px-5 pb-4 pt-1 gap-2">
+      <div className="flex items-center justify-between px-6 pb-5 pt-1 gap-2">
         {/* Left side (LTR): Expand icon + contributor */}
-        <div className="flex items-center gap-2 text-gray-500 shrink-0">
+        <div className="flex items-center gap-2 text-stone-400 shrink-0">
           <button
             onClick={() => onExpand(entry)}
-            className="p-1 hover:text-[#353326] transition-colors"
+            className="p-1 hover:text-stone-600 transition-colors"
             title="Expand"
           >
             <Maximize2 className="h-3.5 w-3.5" />

@@ -72,7 +72,7 @@ export function AppNavBar({
 
   return (
     <>
-      <nav className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <nav className="sticky top-0 z-40 border-b border-white/80 bg-white/60 backdrop-blur-[12px]">
         <div className="mx-auto max-w-[600px] px-4">
           <div className="flex h-14 items-center justify-between gap-2">
             <div className="flex items-center gap-2 shrink-0">

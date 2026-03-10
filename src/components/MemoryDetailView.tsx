@@ -52,9 +52,9 @@ export function MemoryDetailView({
   const isTextOnly = !hasThumbnail && !canPlayVideo && !hasAudio;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-[15px] overflow-y-auto">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-background/95 backdrop-blur border-b">
+      <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white/60 backdrop-blur-[12px] border-b border-white/80">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
@@ -120,7 +120,7 @@ export function MemoryDetailView({
         // Audio-only hero
         if (hasAudio) {
           return (
-            <div className="w-full bg-gradient-to-br from-primary/10 to-primary/5 flex flex-col items-center justify-center py-12 gap-3">
+            <div className="w-full bg-white/40 backdrop-blur-sm flex flex-col items-center justify-center py-12 gap-3">
               <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
                 <Volume2 className="h-8 w-8 text-primary" />
               </div>
@@ -132,14 +132,14 @@ export function MemoryDetailView({
       })()}
 
       {/* Content */}
-      <div className="p-4 space-y-4">
+      <div className="mx-3 my-3 p-5 space-y-4 rounded-xl bg-white/60 backdrop-blur-[12px] border border-white/80 shadow-lg shadow-black/[0.05]">
         {/* Header metadata (LTR) */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-zinc-500">
+          <span className="text-xs font-medium text-stone-400">
             {format(new Date(entry.date), "MMM d, yyyy")}
           </span>
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium text-zinc-800">{babyName}</span>
+            <span className="text-xs font-medium text-stone-500">{babyName}</span>
             {babyDob && (
               <Badge variant="secondary" className="text-xs">
                 {formatAgeAtDate(babyDob, entry.date)}
@@ -167,7 +167,7 @@ export function MemoryDetailView({
 
         {/* Audio player */}
         {hasAudio && (
-          <div className="flex items-center gap-2 rounded-lg bg-muted/50 p-3">
+          <div className="flex items-center gap-2 rounded-lg bg-white/40 backdrop-blur-sm p-3">
             <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
             <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
           </div>
@@ -176,7 +176,7 @@ export function MemoryDetailView({
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t">
           {entry.created_by_nickname && (
-            <p className="text-xs text-zinc-500">
+            <p className="text-xs text-stone-400">
               Added by {entry.created_by_nickname}
             </p>
           )}
