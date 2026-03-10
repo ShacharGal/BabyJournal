@@ -1,73 +1,39 @@
-# Welcome to your Lovable project
+# BabyJournal
 
-## Project info
+A beautiful, private baby memory journal app. Save photos, videos, audio recordings, and text memories for your little ones — all stored securely on your own Google Drive.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Deploy Your Own
 
-## How can I edit this code?
+Want your own BabyJournal for your family? No programming needed!
 
-There are several ways of editing your application.
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2FShacharGal%2FBabyJournal&env=VITE_SUPABASE_URL,VITE_SUPABASE_PUBLISHABLE_KEY&envDescription=You%20will%20get%20these%20values%20from%20Supabase%20in%20Phase%202.%20Enter%20placeholder%20values%20for%20now%20and%20update%20later.&envLink=https%3A%2F%2Fgithub.com%2FShacharGal%2FBabyJournal%2Fblob%2Fmain%2FSETUP.md%23step-42--set-vercel-environment-variables&project-name=baby-journal&repository-name=baby-journal)
 
-**Use Lovable**
+**[Follow the full setup guide here (SETUP.md)](SETUP.md)** — step-by-step instructions with an AI assistant prompt to help you through any part.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Features
 
-Changes made via Lovable will be committed automatically to this repo.
+- **4 memory types**: Photos, videos, audio recordings (record in-app!), and text notes
+- **Google Drive storage**: Files stored in your own Google Drive (15 GB free)
+- **Multiple children**: Track memories for more than one baby
+- **Tags and search**: Tag memories and filter by text, date, media type, or contributor
+- **Family sharing**: Add family members with 3 permission levels (full, add, view-only)
+- **Timeline view**: Browse memories grouped by month with automatic age calculation
+- **Dialogue mode**: Special formatting for funny quotes and conversations
+- **Works on any device**: Mobile-friendly design, accessible from any browser
 
-**Use your preferred IDE**
+## Tech Stack
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+- React + TypeScript + Vite
+- shadcn/ui + Radix UI + Tailwind CSS
+- Supabase (database, storage, edge functions)
+- Google Drive API (file storage via OAuth 2.0)
+- Vercel (hosting)
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## Development
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install          # Install dependencies
+npm run dev          # Local dev server
+npm run build        # Production build
+npm run lint         # ESLint
 ```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
