@@ -25,8 +25,8 @@ export function parseDialogueText(text: string): React.ReactNode[] {
       const quote = line.slice(colonIndex + 1);
       result.push(
         <React.Fragment key={`line-${i}`}>
-          <span className="font-semibold">{speaker}:</span>
-          <span className="italic">{quote}</span>
+          <span className="font-semibold text-zinc-900">{speaker}:</span>
+          <span className="text-gray-600">{quote}</span>
         </React.Fragment>
       );
     } else {

@@ -135,11 +135,11 @@ export function MemoryDetailView({
       <div className="p-4 space-y-4">
         {/* Header metadata (LTR) */}
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-muted-foreground">
+          <span className="text-sm font-medium text-zinc-500">
             {format(new Date(entry.date), "MMM d, yyyy")}
           </span>
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-medium">{babyName}</span>
+            <span className="text-sm font-medium text-zinc-800">{babyName}</span>
             {babyDob && (
               <Badge variant="secondary" className="text-xs">
                 {formatAgeAtDate(babyDob, entry.date)}
@@ -152,7 +152,7 @@ export function MemoryDetailView({
         {entry.description && (
           <div
             dir="auto"
-            className={`leading-relaxed ${isTextOnly ? "text-lg" : "text-base"} ${
+            className={`leading-relaxed text-zinc-800 ${isTextOnly ? "text-lg" : "text-base"} ${
               isDialogue
                 ? "border-r-2 border-amber-300/60 pr-3 rounded-l-md py-2"
                 : ""
@@ -176,7 +176,7 @@ export function MemoryDetailView({
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t">
           {entry.created_by_nickname && (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-zinc-500">
               Added by {entry.created_by_nickname}
             </p>
           )}

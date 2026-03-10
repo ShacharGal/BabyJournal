@@ -367,17 +367,12 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
   return (
     <div className="rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
       {/* Header (LTR): Date left, Name + Age right */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-1">
-        <span className="text-xs font-medium text-muted-foreground">
+      <div className="flex items-center justify-between px-5 pt-4 pb-1">
+        <span className="text-xs font-medium text-zinc-500">
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>
         <div className="flex items-center gap-1.5">
-          {showBaby && (
-            <span className="text-xs font-medium">{babyName}</span>
-          )}
-          {!showBaby && (
-            <span className="text-xs font-medium">{babyName}</span>
-          )}
+          <span className="text-xs font-medium text-zinc-800">{babyName}</span>
           {babyDob && (
             <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
               {formatAgeAtDate(babyDob, entry.date)}
@@ -387,7 +382,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
       </div>
 
       {/* Body: optional media (left) + text (right) */}
-      <div className={`px-4 py-2 ${showSplit ? "flex gap-3" : ""}`}>
+      <div className={`px-5 py-3 ${showSplit ? "flex gap-3" : ""}`}>
         {/* Media container — left side, 35% width */}
         {hasMedia && (
           <div className="w-[35%] shrink-0">
@@ -430,12 +425,12 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
 
         {/* Text container — right side (or full width if no media) */}
         <div
-          className={`relative ${showSplit ? "flex-1 min-w-0" : "w-full"}`}
+          className={`${showSplit ? "flex-1 min-w-0" : "w-full"}`}
         >
           {entry.description ? (
             <div
               dir="auto"
-              className={`text-sm whitespace-pre-wrap line-clamp-5 ${
+              className={`text-sm text-zinc-800 whitespace-pre-wrap line-clamp-5 ${
                 isDialogue
                   ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
                   : ""
@@ -447,42 +442,42 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
               }
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground italic">No description</div>
+            <div className="text-sm text-zinc-500">No description</div>
           )}
-
-          {/* Expand icon — bottom-left of text area */}
-          <button
-            onClick={() => onExpand(entry)}
-            className="absolute bottom-0 left-0 p-1 text-muted-foreground hover:text-foreground transition-colors"
-            title="Expand"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* Footer (LTR/RTL mix): Contributor left, Tags right */}
-      <div className="flex items-center justify-between px-4 pb-3 pt-1 gap-2">
-        <div className="text-xs text-muted-foreground shrink-0">
-          {entry.created_by_nickname ? `Added by ${entry.created_by_nickname}` : "\u00A0"}
-        </div>
-        {entry.entry_tags.length > 0 && (
-          <div className="flex flex-wrap gap-1 justify-end min-w-0">
-            {entry.entry_tags.map((et) => (
-              <Badge
-                key={et.tag_id}
-                variant="secondary"
-                className="text-[10px] px-1.5 py-0"
-                style={{
-                  backgroundColor: `${et.tags.color}20`,
-                  color: et.tags.color || undefined,
-                }}
-              >
-                {et.tags.name}
-              </Badge>
-            ))}
+      {/* Footer: Expand icon (left/start) — Contributor + Tags (right/end) */}
+      <div className="flex items-end justify-between px-5 pb-4 pt-1 gap-2">
+        <button
+          onClick={() => onExpand(entry)}
+          className="p-1 text-zinc-400 hover:text-zinc-700 transition-colors"
+          title="Expand"
+        >
+          <Maximize2 className="h-3.5 w-3.5" />
+        </button>
+        <div className="flex items-center gap-2 min-w-0">
+          {entry.entry_tags.length > 0 && (
+            <div className="flex flex-wrap gap-1 justify-end min-w-0">
+              {entry.entry_tags.map((et) => (
+                <Badge
+                  key={et.tag_id}
+                  variant="secondary"
+                  className="text-[10px] px-1.5 py-0"
+                  style={{
+                    backgroundColor: `${et.tags.color}20`,
+                    color: et.tags.color || undefined,
+                  }}
+                >
+                  {et.tags.name}
+                </Badge>
+              ))}
+            </div>
+          )}
+          <div className="text-xs text-zinc-500 shrink-0">
+            {entry.created_by_nickname ? `Added by ${entry.created_by_nickname}` : "\u00A0"}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
