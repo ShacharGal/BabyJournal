@@ -495,14 +495,14 @@ export function AddMemoryDialog({
       <DialogContent className="w-[calc(100vw-2rem)] max-w-md">
         {isUploading && (
           <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center pointer-events-auto">
-            <div className="absolute inset-0 bg-white/90 backdrop-blur-md rounded-lg" />
-            <div className="relative flex flex-col items-center gap-3">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p className="text-sm font-medium text-foreground">
+            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm rounded-lg" />
+            <div className="relative flex flex-col items-center gap-3 mt-16">
+              <Loader2 className="h-8 w-8 animate-spin text-white" />
+              <p className="text-sm font-medium text-white">
                 {uploadStatus || "Saving..."}
               </p>
               {(file?.type.startsWith("video/") || secondaryFiles.length > 0) && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/70">
                   This might take a moment...
                 </p>
               )}
