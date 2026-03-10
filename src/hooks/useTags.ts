@@ -20,6 +20,29 @@ export function useTags() {
   });
 }
 
+export function useUsedTags() {
+  return useQuery({
+    queryKey: ["used-tags"],
+    queryFn: async () => {
+      const { data: entryTags, error: etError } = await supabase
+        .from("entry_tags")
+        .select("tag_id");
+      if (etError) throw etError;
+
+      const usedIds = Array.from(new Set((entryTags ?? []).map((et) => et.tag_id)));
+      if (usedIds.length === 0) return [];
+
+      const { data: tags, error: tError } = await supabase
+        .from("tags")
+        .select("*")
+        .in("id", usedIds)
+        .order("name", { ascending: true });
+      if (tError) throw tError;
+      return tags;
+    },
+  });
+}
+
 export function useCreateTag() {
   const queryClient = useQueryClient();
   

@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useTags } from "@/hooks/useTags";
+import { useUsedTags } from "@/hooks/useTags";
 import { Search, X } from "lucide-react";
 import { useEntryContributors } from "@/hooks/useEntries";
 
@@ -28,7 +28,7 @@ interface SearchFiltersProps {
 }
 
 export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
-  const { data: tags } = useTags();
+  const { data: tags } = useUsedTags();
   const { data: contributors } = useEntryContributors();
 
   const update = (partial: Partial<Filters>) =>

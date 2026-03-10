@@ -225,10 +225,23 @@ export function useEntryContributors() {
     queryKey: ["entry-contributors"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("app_users_public" as any)
-        .select("id, nickname");
+        .from("entries")
+        .select("created_by");
       if (error) throw error;
-      return (data ?? []) as { id: string; nickname: string }[];
+
+      const uniqueIds = Array.from(
+        new Set((data ?? []).map((r) => r.created_by).filter(Boolean))
+      ) as string[];
+
+      if (uniqueIds.length === 0) return [];
+
+      const { data: users, error: usersError } = await supabase
+        .from("app_users_public" as any)
+        .select("id, nickname")
+        .in("id", uniqueIds);
+      if (usersError) throw usersError;
+
+      return (users ?? []) as { id: string; nickname: string }[];
     },
   });
 }
