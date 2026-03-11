@@ -35,16 +35,41 @@ export function useToggleFavorite() {
           .delete()
           .eq("entry_id", entryId)
           .eq("user_id", userId);
-        if (error) throw error;
+        if (error) {
+          console.error("[Favorites] Delete error:", error);
+          throw error;
+        }
       } else {
         const { error } = await (supabase as any)
           .from("entry_favorites")
           .insert({ entry_id: entryId, user_id: userId });
-        if (error) throw error;
+        if (error) {
+          console.error("[Favorites] Insert error:", error);
+          throw error;
+        }
       }
       console.log(`[Favorites] ${isFavorited ? "Removed" : "Added"} entry ${entryId}`);
     },
-    onSuccess: (_data, variables) => {
+    onMutate: async ({ entryId, userId, isFavorited }) => {
+      await queryClient.cancelQueries({ queryKey: ["favorites", userId] });
+      const previous = queryClient.getQueryData<Set<string>>(["favorites", userId]);
+      queryClient.setQueryData<Set<string>>(["favorites", userId], (old = new Set()) => {
+        const next = new Set(old);
+        if (isFavorited) {
+          next.delete(entryId);
+        } else {
+          next.add(entryId);
+        }
+        return next;
+      });
+      return { previous };
+    },
+    onError: (_err, variables, context) => {
+      if (context?.previous !== undefined) {
+        queryClient.setQueryData(["favorites", variables.userId], context.previous);
+      }
+    },
+    onSettled: (_data, _err, variables) => {
       queryClient.invalidateQueries({ queryKey: ["favorites", variables.userId] });
     },
   });
