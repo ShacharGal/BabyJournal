@@ -20,6 +20,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useVisualViewport } from "@/hooks/useVisualViewport";
 import type { EntryWithTags } from "@/hooks/useEntries";
 import { useAddMemoryForm } from "./useAddMemoryForm";
 import { UploadOverlay } from "./UploadOverlay";
@@ -47,7 +48,7 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
   } = form;
 
   return (
-    <form onSubmit={form.handleSubmit} className="flex flex-col h-full relative">
+    <form onSubmit={form.handleSubmit} className="flex flex-col relative">
       {/* Upload overlay */}
       {isUploading && (
         <UploadOverlay
@@ -88,13 +89,13 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
       </div>
 
       {/* Hero textarea */}
-      <div className="flex-1 px-4 pb-2 min-h-0">
+      <div className="px-4 pb-2 h-[160px]">
         <Textarea
           dir="auto"
           placeholder="Add your text..."
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="h-full min-h-[120px] resize-none border bg-accent/30 rounded-lg focus-visible:ring-1"
+          className="h-full resize-none overflow-y-auto border bg-accent/30 rounded-lg focus-visible:ring-1"
         />
       </div>
 
@@ -122,12 +123,15 @@ export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEnt
   const isMobile = useIsMobile();
   const form = useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEntry });
 
+  const viewportHeight = useVisualViewport();
+
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="bottom"
-          className="h-[100dvh] p-0 flex flex-col"
+          className="p-0 flex flex-col rounded-t-xl"
+          style={{ maxHeight: viewportHeight }}
           onInteractOutside={(e) => e.preventDefault()}
           onPointerDownOutside={(e) => e.preventDefault()}
           onFocusOutside={(e) => e.preventDefault()}
