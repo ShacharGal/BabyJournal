@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { AppNavBar } from "@/components/AppNavBar";
 import { MemoryFeed } from "@/components/MemoryFeed";
-import { AddMemoryDialog } from "@/components/AddMemoryDialog";
+import { AddMemoryDialog } from "@/components/add-memory/AddMemoryDialog";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
 

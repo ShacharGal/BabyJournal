@@ -21,9 +21,10 @@ import { cn } from "@/lib/utils";
 interface TagComboboxProps {
   selectedTagIds: string[];
   onToggleTag: (tagId: string) => void;
+  iconOnly?: boolean;
 }
 
-export function TagCombobox({ selectedTagIds, onToggleTag }: TagComboboxProps) {
+export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagComboboxProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const { data: tags } = useTags();
@@ -48,12 +49,23 @@ export function TagCombobox({ selectedTagIds, onToggleTag }: TagComboboxProps) {
     <div className="space-y-2">
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <Button variant="outline" size="sm" className="gap-1.5 h-8">
-            <Tags className="h-3.5 w-3.5" />
-            {selectedTagIds.length > 0
-              ? `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""}`
-              : "Add tags"}
-          </Button>
+          {iconOnly ? (
+            <Button variant="ghost" size="icon" type="button" className="h-9 w-9 rounded-full relative">
+              <Tags className="h-5 w-5" />
+              {selectedTagIds.length > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
+                  {selectedTagIds.length}
+                </span>
+              )}
+            </Button>
+          ) : (
+            <Button variant="outline" size="sm" className="gap-1.5 h-8">
+              <Tags className="h-3.5 w-3.5" />
+              {selectedTagIds.length > 0
+                ? `${selectedTagIds.length} tag${selectedTagIds.length > 1 ? "s" : ""}`
+                : "Add tags"}
+            </Button>
+          )}
         </PopoverTrigger>
         <PopoverContent className="w-56 p-0" align="start">
           <Command>
@@ -101,7 +113,7 @@ export function TagCombobox({ selectedTagIds, onToggleTag }: TagComboboxProps) {
       </Popover>
 
       {/* Selected tags display */}
-      {selectedTagIds.length > 0 && tags && (
+      {!iconOnly && selectedTagIds.length > 0 && tags && (
         <div className="flex flex-wrap gap-1">
           {selectedTagIds.map((id) => {
             const tag = tags.find((t) => t.id === id);
