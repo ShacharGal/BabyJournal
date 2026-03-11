@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic, Volume2 } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
@@ -91,56 +91,8 @@ export function MemoryDetailView({
         )}
       </div>
 
-      {/* Media section */}
-      {(() => {
-        // Build unified album: hero image first, then secondary images
-        const albumImages: { id: string; url: string }[] = [];
-        if (hasHeroImage && !canPlayVideo) {
-          albumImages.push({ id: "hero", url: heroImageUrl! });
-        }
-        if (entry.entry_images) {
-          for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
-            const imgUrl = img.thumbnail_url
-              || (img.drive_file_id ? driveStreamUrl(img.drive_file_id) : null);
-            if (imgUrl) {
-              albumImages.push({ id: img.id, url: imgUrl });
-            }
-          }
-        }
-
-        if (canPlayVideo) {
-          // Video gets its own player, secondary images as album below
-          return (
-            <>
-              <DetailVideoPlayer
-                fileId={entry.drive_file_id!}
-                thumbnailUrl={entry.thumbnail_url}
-              />
-              {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
-            </>
-          );
-        }
-
-        if (albumImages.length > 0) {
-          return <ImageAlbum images={albumImages} />;
-        }
-
-        // Audio-only hero
-        if (hasAudio) {
-          return (
-            <div className="w-full bg-white/40 backdrop-blur-sm flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-16 h-16 rounded-full bg-primary/15 flex items-center justify-center">
-                <Volume2 className="h-8 w-8 text-primary" />
-              </div>
-            </div>
-          );
-        }
-
-        return null;
-      })()}
-
       {/* Content */}
-      <div className="mx-3 my-3 p-5 space-y-4 rounded-xl bg-white/60 backdrop-blur-[12px] border border-white/80 shadow-lg shadow-black/[0.05]">
+      <div className="mx-3 mt-3 p-5 space-y-4 rounded-xl bg-white/60 backdrop-blur-[12px] border border-white/80 shadow-lg shadow-black/[0.05]">
         {/* Header metadata (LTR) */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-stone-400">
@@ -173,14 +125,6 @@ export function MemoryDetailView({
           </div>
         )}
 
-        {/* Audio player */}
-        {hasAudio && (
-          <div className="flex items-center gap-2 rounded-lg bg-white/40 backdrop-blur-sm p-3">
-            <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
-            <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
-          </div>
-        )}
-
         {/* Footer */}
         <div className="flex items-center justify-between pt-2 border-t">
           {entry.created_by_nickname && (
@@ -208,6 +152,49 @@ export function MemoryDetailView({
           )}
         </div>
       </div>
+
+      {/* Visual media section */}
+      {(() => {
+        const albumImages: { id: string; url: string }[] = [];
+        if (hasHeroImage && !canPlayVideo) {
+          albumImages.push({ id: "hero", url: heroImageUrl! });
+        }
+        if (entry.entry_images) {
+          for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
+            const imgUrl = img.thumbnail_url
+              || (img.drive_file_id ? driveStreamUrl(img.drive_file_id) : null);
+            if (imgUrl) {
+              albumImages.push({ id: img.id, url: imgUrl });
+            }
+          }
+        }
+
+        if (canPlayVideo) {
+          return (
+            <>
+              <DetailVideoPlayer
+                fileId={entry.drive_file_id!}
+                thumbnailUrl={entry.thumbnail_url}
+              />
+              {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
+            </>
+          );
+        }
+
+        if (albumImages.length > 0) {
+          return <ImageAlbum images={albumImages} />;
+        }
+
+        return null;
+      })()}
+
+      {/* Audio player */}
+      {hasAudio && (
+        <div className="mx-3 mb-3 flex items-center gap-2 rounded-xl bg-white/60 backdrop-blur-[12px] border border-white/80 shadow-lg shadow-black/[0.05] p-3">
+          <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
+          <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
+        </div>
+      )}
     </div>
   );
 }
