@@ -245,10 +245,10 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     <>
       {/* Sticky month/year header */}
       {filteredEntries.length > 0 && (
-        <div className="sticky top-14 z-30 flex items-center justify-center py-1.5 bg-white/60 backdrop-blur-[12px] border-b border-white/80">
+        <div className="sticky top-14 z-30 flex items-center justify-center py-1.5 pointer-events-none">
           <button
             onClick={() => setMonthPickerOpen(!monthPickerOpen)}
-            className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1 rounded-full hover:bg-accent"
+            className="pointer-events-auto flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-3 py-1 rounded-full bg-white/70 backdrop-blur-[12px] border border-white/80 shadow-sm hover:bg-white/90"
           >
             <Calendar className="h-3.5 w-3.5" />
             {currentMonthLabel}
