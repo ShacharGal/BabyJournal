@@ -16,6 +16,7 @@ Want your own BabyJournal for your family? No programming needed!
 - **Google Drive storage**: Files stored in your own Google Drive (15 GB free)
 - **Multiple children**: Track memories for more than one baby
 - **Tags and search**: Tag memories and filter by text, date, media type, or contributor
+- **Favorites**: Heart your favorite memories — each family member has their own favorites list
 - **Family sharing**: Add family members with 3 permission levels (full, add, view-only)
 - **Timeline view**: Browse memories grouped by month with automatic age calculation
 - **Dialogue mode**: Special formatting for funny quotes and conversations

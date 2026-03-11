@@ -479,6 +479,10 @@ Tag your memories to find them later. The app comes with these default tags:
 
 You can also **create your own tags** by typing a new name in the tag selector.
 
+### Favorites
+
+Tap the **heart icon** on any memory card to mark it as a favorite. Favorites are per-user — each family member has their own favorites list. Access your favorites from the **heart icon in the navigation bar** to see all your hearted memories in one place.
+
 ### Search and Filters
 
 Find memories easily with powerful filtering:

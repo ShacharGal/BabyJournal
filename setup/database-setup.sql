@@ -49,6 +49,7 @@ CREATE TABLE public.entries (
   audio_url TEXT,
   audio_file_name TEXT,
   audio_file_size INTEGER,
+  app_version SMALLINT,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -79,6 +80,15 @@ CREATE TABLE public.entry_tags (
   tag_id UUID NOT NULL REFERENCES public.tags(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   UNIQUE(entry_id, tag_id)
+);
+
+-- Favorites — tracks which entries each user has hearted
+CREATE TABLE public.entry_favorites (
+  id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+  entry_id UUID NOT NULL REFERENCES public.entries(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES public.app_users(id) ON DELETE CASCADE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
+  UNIQUE(entry_id, user_id)
 );
 
 -- Google OAuth tokens (single row — one Google account per instance)
@@ -124,6 +134,7 @@ ALTER TABLE public.entries ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entry_images ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.tags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.entry_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.entry_favorites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.google_tokens ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.app_users ENABLE ROW LEVEL SECURITY;
 
@@ -133,6 +144,7 @@ CREATE POLICY "Allow all access to entries"      ON public.entries      FOR ALL 
 CREATE POLICY "Allow all access to entry_images" ON public.entry_images FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access to tags"         ON public.tags         FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access to entry_tags"   ON public.entry_tags   FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all access to entry_favorites" ON public.entry_favorites FOR ALL USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all access to google_tokens" ON public.google_tokens FOR ALL USING (true) WITH CHECK (true);
 
 -- app_users is LOCKED DOWN — only edge functions (service role) can access
@@ -159,6 +171,8 @@ CREATE INDEX idx_entries_date ON public.entries(date DESC);
 CREATE INDEX idx_entries_type ON public.entries(type);
 CREATE INDEX idx_entry_tags_entry_id ON public.entry_tags(entry_id);
 CREATE INDEX idx_entry_tags_tag_id ON public.entry_tags(tag_id);
+CREATE INDEX idx_entry_favorites_user_id ON public.entry_favorites(user_id);
+CREATE INDEX idx_entry_favorites_entry_id ON public.entry_favorites(entry_id);
 
 -- ==========================================
 -- 6. STORAGE BUCKETS
