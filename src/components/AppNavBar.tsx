@@ -26,7 +26,6 @@ import {
   LogOut,
   X,
   Heart,
-  SlidersHorizontal,
   PenLine,
 } from "lucide-react";
 import { GoogleDriveConnect } from "@/components/GoogleDriveConnect";
@@ -121,7 +120,7 @@ export function AppNavBar({
                   <X className="h-4 w-4" />
                 ) : (
                   <>
-                    <SlidersHorizontal className="h-4 w-4" />
+                    <Search className="h-4 w-4" />
                     {activeFilterCount > 0 && (
                       <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
                         {activeFilterCount}
