@@ -13,6 +13,7 @@ import type { Filters } from "@/components/SearchFilters";
 import { MemoryDetailView } from "@/components/MemoryDetailView";
 import { parseDialogueText } from "@/lib/dialogueParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
+import { useFavoriteIds, useToggleFavorite } from "@/hooks/useFavorites";
 
 const EARTH_TONE_COLORS = [
   "#e27a47", // Rust
@@ -63,6 +64,8 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const { data: babies } = useBabies();
   const deleteEntry = useDeleteEntry();
   const { canEdit, canAdd, user } = useAuthContext();
+  const { data: favoriteIds = new Set<string>() } = useFavoriteIds(user?.id);
+  const toggleFavorite = useToggleFavorite();
   const [detailEntry, setDetailEntry] = useState<EntryWithTags | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -324,6 +327,11 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
                   babyDob={getBabyDob(entry.baby_id)}
                   showBaby={!babyId}
                   onExpand={setDetailEntry}
+                  isFavorited={favoriteIds.has(entry.id)}
+                  onToggleFavorite={(entryId) => {
+                    if (!user?.id) return;
+                    toggleFavorite.mutate({ entryId, userId: user.id, isFavorited: favoriteIds.has(entryId) });
+                  }}
                 />
               </div>
             ))}
@@ -353,6 +361,11 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
             setDetailEntry(null);
             handleDelete(id);
           }}
+          isFavorited={favoriteIds.has(detailEntry.id)}
+          onToggleFavorite={() => {
+            if (!user?.id) return;
+            toggleFavorite.mutate({ entryId: detailEntry.id, userId: user.id, isFavorited: favoriteIds.has(detailEntry.id) });
+          }}
         />
       )}
     </>
@@ -363,15 +376,17 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 /*  MemoryCard — Text-First Feed Card                              */
 /* ──────────────────────────────────────────────────────────────── */
 
-interface MemoryCardProps {
+export interface MemoryCardProps {
   entry: EntryWithTags;
   babyName: string;
   babyDob: string | null;
   showBaby: boolean;
   onExpand: (entry: EntryWithTags) => void;
+  isFavorited?: boolean;
+  onToggleFavorite?: (entryId: string) => void;
 }
 
-function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCardProps) {
+export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite }: MemoryCardProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
@@ -473,7 +488,7 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
 
       {/* Footer: LTR left (expand + contributor) — RTL right (tags) */}
       <div className="flex items-center justify-between px-6 pb-5 pt-1 gap-2">
-        {/* Left side (LTR): Expand icon + contributor */}
+        {/* Left side (LTR): Expand icon + heart + contributor */}
         <div className="flex items-center gap-2 text-stone-400 shrink-0">
           <button
             onClick={() => onExpand(entry)}
@@ -482,6 +497,15 @@ function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand }: MemoryCard
           >
             <Maximize2 className="h-3.5 w-3.5" />
           </button>
+          {onToggleFavorite && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onToggleFavorite(entry.id); }}
+              className="p-1 hover:text-rose-400 transition-colors"
+              title={isFavorited ? "Remove from favourites" : "Add to favourites"}
+            >
+              <Heart className={`h-3.5 w-3.5 ${isFavorited ? "fill-rose-400 text-rose-400" : ""}`} />
+            </button>
+          )}
           {entry.created_by_nickname && (
             <div className="flex items-center gap-1 text-xs">
               <User className="h-3.5 w-3.5" />

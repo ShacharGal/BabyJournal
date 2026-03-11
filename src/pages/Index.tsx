@@ -2,6 +2,7 @@ import { useState } from "react";
 import { AppNavBar } from "@/components/AppNavBar";
 import { MemoryFeed } from "@/components/MemoryFeed";
 import { AddMemoryDialog } from "@/components/add-memory/AddMemoryDialog";
+import { FavoritesView } from "@/components/FavoritesView";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Plus } from "lucide-react";
 
@@ -13,6 +14,7 @@ const Index = () => {
   const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "", entryType: "", postType: "", contributorId: "" });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
+  const [showFavorites, setShowFavorites] = useState(false);
   const { canAdd } = useAuthContext();
 
   const handleEdit = (entry: EntryWithTags) => {
@@ -32,6 +34,7 @@ const Index = () => {
         onSelectBaby={setSelectedBabyId}
         filters={filters}
         onFiltersChange={setFilters}
+        onShowFavorites={() => setShowFavorites(true)}
       />
 
       <main className="mx-auto max-w-[600px] px-4 py-6 pb-24">
@@ -53,6 +56,8 @@ const Index = () => {
         preSelectedBabyId={selectedBabyId}
         editEntry={editEntry}
       />
+
+      {showFavorites && <FavoritesView onClose={() => setShowFavorites(false)} />}
     </div>
   );
 };

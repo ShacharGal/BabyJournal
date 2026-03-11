@@ -40,6 +40,7 @@ interface AppNavBarProps {
   onSelectBaby: (babyId: string | undefined) => void;
   filters: Filters;
   onFiltersChange: (filters: Filters) => void;
+  onShowFavorites: () => void;
 }
 
 export function AppNavBar({
@@ -47,6 +48,7 @@ export function AppNavBar({
   onSelectBaby,
   filters,
   onFiltersChange,
+  onShowFavorites,
 }: AppNavBarProps) {
   const { data: babies } = useBabies();
   const { user, canEdit, logout } = useAuthContext();
@@ -76,7 +78,13 @@ export function AppNavBar({
         <div className="mx-auto max-w-[600px] px-4">
           <div className="flex h-14 items-center justify-between gap-2">
             <div className="flex items-center gap-2 shrink-0">
-              <Heart className="h-5 w-5 text-primary" />
+              <button
+                onClick={onShowFavorites}
+                className="p-0 hover:opacity-70 transition-opacity"
+                title="Favourites"
+              >
+                <Heart className="h-5 w-5 text-primary" />
+              </button>
               <span className="font-semibold text-base hidden sm:inline">Family Journal</span>
               <span className="text-[10px] text-muted-foreground">v{APP_VERSION}</span>
             </div>

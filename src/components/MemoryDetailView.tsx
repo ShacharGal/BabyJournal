@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic, Heart } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
@@ -33,6 +33,8 @@ interface MemoryDetailViewProps {
   onClose: () => void;
   onEdit: (entry: EntryWithTags) => void;
   onDelete: (id: string) => void;
+  isFavorited?: boolean;
+  onToggleFavorite?: () => void;
 }
 
 export function MemoryDetailView({
@@ -43,6 +45,8 @@ export function MemoryDetailView({
   onClose,
   onEdit,
   onDelete,
+  isFavorited = false,
+  onToggleFavorite,
 }: MemoryDetailViewProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
@@ -64,31 +68,43 @@ export function MemoryDetailView({
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
-        {canEdit && (
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
+          {onToggleFavorite && (
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => {
-                onEdit(entry);
-                onClose();
-              }}
+              onClick={onToggleFavorite}
+              title={isFavorited ? "Remove from favourites" : "Add to favourites"}
             >
-              <Pencil className="h-4 w-4" />
+              <Heart className={`h-4 w-4 ${isFavorited ? "fill-rose-400 text-rose-400" : ""}`} />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="text-destructive hover:text-destructive"
-              onClick={() => {
-                onDelete(entry.id);
-                onClose();
-              }}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
+          )}
+          {canEdit && (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  onEdit(entry);
+                  onClose();
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-destructive hover:text-destructive"
+                onClick={() => {
+                  onDelete(entry.id);
+                  onClose();
+                }}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Content */}
