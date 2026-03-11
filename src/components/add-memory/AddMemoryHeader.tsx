@@ -55,7 +55,7 @@ export function AddMemoryHeader({ babies, selectedBabyId, onSelectBaby, date, on
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-48 p-1" align="start">
-          {babies?.map((baby) => (
+          {Array.isArray(babies) && babies.map((baby) => (
             <button
               key={baby.id}
               type="button"

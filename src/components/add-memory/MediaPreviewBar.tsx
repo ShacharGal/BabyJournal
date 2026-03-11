@@ -45,25 +45,37 @@ export function MediaPreviewBar({ form }: MediaPreviewBarProps) {
     removeAudio, removeExistingAudioFile,
   } = form;
 
+  const safeSecondaryFiles = Array.isArray(secondaryFiles) ? secondaryFiles : [];
+  const safeRemoveSecondaryIds = Array.isArray(removeSecondaryIds) ? removeSecondaryIds : [];
+
+  console.log("[MediaPreview] render", {
+    hasFile: !!file,
+    secondaryFilesType: typeof secondaryFiles,
+    secondaryFilesIsArray: Array.isArray(secondaryFiles),
+    secondaryFilesLen: safeSecondaryFiles.length,
+    isEditing,
+    removeSecondaryIdsType: typeof removeSecondaryIds,
+  });
+
   // Create object URLs for new files
   const primaryUrl = useMemo(() => file ? URL.createObjectURL(file) : null, [file]);
   const secondaryUrls = useMemo(
-    () => secondaryFiles.map((f) => URL.createObjectURL(f)),
-    [secondaryFiles]
+    () => safeSecondaryFiles.map((f) => URL.createObjectURL(f)),
+    [safeSecondaryFiles]
   );
 
   const hasExistingPrimary = isEditing && editEntry?.thumbnail_url && !removeExistingFile && !file;
-  const hasExistingSecondary = isEditing && editEntry?.entry_images?.filter(
-    (img) => !removeSecondaryIds.includes(img.id)
-  );
+  const existingSecondaryImages = isEditing && Array.isArray(editEntry?.entry_images)
+    ? editEntry!.entry_images!.filter((img) => !safeRemoveSecondaryIds.includes(img.id))
+    : [];
   const hasExistingAudio = isEditing && existingAudioName && !removeExistingAudio;
   const showAudio = audioFile || hasRecording || hasExistingAudio;
 
   const hasAnything =
     !!file ||
     !!hasExistingPrimary ||
-    (hasExistingSecondary && hasExistingSecondary.length > 0) ||
-    secondaryFiles.length > 0 ||
+    existingSecondaryImages.length > 0 ||
+    safeSecondaryFiles.length > 0 ||
     showAudio;
 
   if (!hasAnything) return null;
@@ -90,7 +102,7 @@ export function MediaPreviewBar({ form }: MediaPreviewBarProps) {
         )}
 
         {/* Existing secondary images (edit mode) */}
-        {hasExistingSecondary?.map((img) => (
+        {existingSecondaryImages.map((img) => (
           <MediaThumbnail
             key={img.id}
             src={img.thumbnail_url || ""}
@@ -99,7 +111,7 @@ export function MediaPreviewBar({ form }: MediaPreviewBarProps) {
         ))}
 
         {/* New secondary files */}
-        {secondaryFiles.map((f, i) => (
+        {safeSecondaryFiles.map((f, i) => (
           <MediaThumbnail
             key={`new-${i}`}
             src={secondaryUrls[i]}

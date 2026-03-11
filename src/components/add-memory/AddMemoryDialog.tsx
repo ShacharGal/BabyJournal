@@ -2,6 +2,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Sheet,
@@ -51,7 +52,7 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
       {isUploading && (
         <UploadOverlay
           uploadStatus={uploadStatus}
-          hasVideoOrMultiple={!!file?.type.startsWith("video/") || secondaryFiles.length > 0}
+          hasVideoOrMultiple={!!file?.type.startsWith("video/") || (Array.isArray(secondaryFiles) && secondaryFiles.length > 0)}
         />
       )}
 
@@ -124,7 +125,13 @@ export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEnt
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
+        <SheetContent
+          side="bottom"
+          className="h-[100dvh] p-0 flex flex-col"
+          onInteractOutside={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onFocusOutside={(e) => e.preventDefault()}
+        >
           <SheetTitle className="sr-only">{form.isEditing ? "Edit memory" : "Add a memory"}</SheetTitle>
           <SheetDescription className="sr-only">
             {form.isEditing ? "Update this memory" : "Capture a precious moment"}
@@ -137,8 +144,16 @@ export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEnt
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden"
+        onInteractOutside={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onFocusOutside={(e) => e.preventDefault()}
+      >
         <DialogTitle className="sr-only">{form.isEditing ? "Edit memory" : "Add a memory"}</DialogTitle>
+        <DialogDescription className="sr-only">
+          {form.isEditing ? "Update this memory" : "Capture a precious moment"}
+        </DialogDescription>
         <AddMemoryContent form={form} />
       </DialogContent>
     </Dialog>

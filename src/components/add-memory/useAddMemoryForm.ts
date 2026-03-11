@@ -118,10 +118,12 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
   const handleCameraFilesChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
+    console.log("[AddMemory] Camera files selected:", files.length, files.map(f => f.name));
     if (files.length === 0) return;
 
     // First file is primary
     const primary = files[0];
+    console.log("[AddMemory] Setting primary file:", primary.name, primary.type);
     setFile(primary);
 
     // Try to extract date from EXIF
