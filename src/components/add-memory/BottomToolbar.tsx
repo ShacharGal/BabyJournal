@@ -18,7 +18,7 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
   } = form;
 
   return (
-    <div className="border-t px-3 py-2 flex items-center gap-1">
+    <div className="border-t px-3 py-2 flex items-center gap-2">
       {/* Publish / Update button */}
       <Button
         type="submit"
@@ -43,13 +43,13 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
       {/* Camera button */}
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="icon"
-        className="h-9 w-9 rounded-full"
+        className="h-11 w-11 rounded-full"
         onClick={() => cameraInputRef.current?.click()}
         disabled={isUploading}
       >
-        <Camera className="h-5 w-5" />
+        <Camera className="h-6 w-6" />
       </Button>
 
       {/* Tags */}

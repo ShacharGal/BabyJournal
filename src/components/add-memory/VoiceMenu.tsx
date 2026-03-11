@@ -17,8 +17,8 @@ export function VoiceMenu({ onRecord, onAttachFile, disabled }: VoiceMenuProps) 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button type="button" variant="ghost" size="icon" className="h-9 w-9 rounded-full" disabled={disabled}>
-          <Mic className="h-5 w-5" />
+        <Button type="button" variant="outline" size="icon" className="h-11 w-11 rounded-full" disabled={disabled}>
+          <Mic className="h-6 w-6" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="center" side="top">

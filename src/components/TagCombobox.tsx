@@ -50,8 +50,8 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           {iconOnly ? (
-            <Button variant="ghost" size="icon" type="button" className="h-9 w-9 rounded-full relative">
-              <Tags className="h-5 w-5" />
+            <Button variant="outline" size="icon" type="button" className="h-11 w-11 rounded-full relative">
+              <Tags className="h-6 w-6" />
               {selectedTagIds.length > 0 && (
                 <span className="absolute -top-0.5 -right-0.5 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center">
                   {selectedTagIds.length}

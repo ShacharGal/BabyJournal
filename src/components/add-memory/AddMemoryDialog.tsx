@@ -124,7 +124,7 @@ export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEnt
   if (isMobile) {
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col">
+        <SheetContent side="bottom" className="h-[100dvh] p-0 flex flex-col" onInteractOutside={(e) => e.preventDefault()}>
           <SheetTitle className="sr-only">{form.isEditing ? "Edit memory" : "Add a memory"}</SheetTitle>
           <SheetDescription className="sr-only">
             {form.isEditing ? "Update this memory" : "Capture a precious moment"}
@@ -137,7 +137,7 @@ export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEnt
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden">
+      <DialogContent className="max-w-lg max-h-[90vh] p-0 flex flex-col overflow-hidden" onInteractOutside={(e) => e.preventDefault()}>
         <DialogTitle className="sr-only">{form.isEditing ? "Edit memory" : "Add a memory"}</DialogTitle>
         <AddMemoryContent form={form} />
       </DialogContent>
