@@ -64,7 +64,7 @@ export function MemoryDetailView({
   return (
     <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
       {/* Top bar */}
-      <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white/60 backdrop-blur-[12px] border-b border-white/80">
+      <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white border-b border-stone-200">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
@@ -108,7 +108,7 @@ export function MemoryDetailView({
       </div>
 
       {/* Content */}
-      <div className="mx-3 mt-3 p-5 space-y-4 rounded-xl bg-white/60 backdrop-blur-[12px] border border-white/80 shadow-lg shadow-black/[0.05]">
+      <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
         {/* Header metadata (LTR) */}
         <div className="flex items-center justify-between">
           <span className="text-xs font-medium text-stone-400">
