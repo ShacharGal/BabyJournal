@@ -366,6 +366,8 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
             if (!user?.id) return;
             toggleFavorite.mutate({ entryId: detailEntry.id, userId: user.id, isFavorited: favoriteIds.has(detailEntry.id) });
           }}
+          allEntries={filteredEntries}
+          onNavigate={setDetailEntry}
         />
       )}
     </>

@@ -81,6 +81,8 @@ export function FavoritesView({ onClose }: FavoritesViewProps) {
             if (!user?.id) return;
             toggleFavorite.mutate({ entryId: detailEntry.id, userId: user.id, isFavorited: favoriteIds.has(detailEntry.id) });
           }}
+          allEntries={entries}
+          onNavigate={setDetailEntry}
         />
       )}
     </div>

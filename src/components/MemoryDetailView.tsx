@@ -35,6 +35,8 @@ interface MemoryDetailViewProps {
   onDelete: (id: string) => void;
   isFavorited?: boolean;
   onToggleFavorite?: () => void;
+  allEntries?: EntryWithTags[];
+  onNavigate?: (entry: EntryWithTags) => void;
 }
 
 export function MemoryDetailView({
@@ -47,6 +49,8 @@ export function MemoryDetailView({
   onDelete,
   isFavorited = false,
   onToggleFavorite,
+  allEntries,
+  onNavigate,
 }: MemoryDetailViewProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
@@ -61,13 +65,71 @@ export function MemoryDetailView({
   const hasHeroImage = !!heroImageUrl;
   const isTextOnly = !hasHeroImage && !canPlayVideo && !hasAudio;
 
+  // Swipe navigation
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
+
+  const currentIndex = allEntries ? allEntries.findIndex((e) => e.id === entry.id) : -1;
+  const hasPrev = currentIndex > 0;
+  const hasNext = allEntries ? currentIndex < allEntries.length - 1 : false;
+
+  const navigateTo = useCallback((direction: "left" | "right") => {
+    if (!allEntries || !onNavigate) return;
+    const targetIndex = direction === "left" ? currentIndex + 1 : currentIndex - 1;
+    if (targetIndex < 0 || targetIndex >= allEntries.length) return;
+
+    setSlideDirection(direction);
+    // Small delay for the slide-out animation, then navigate
+    setTimeout(() => {
+      onNavigate(allEntries[targetIndex]);
+      setSlideDirection(null);
+    }, 150);
+  }, [allEntries, currentIndex, onNavigate]);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    const start = touchStartRef.current;
+    if (!start) return;
+    touchStartRef.current = null;
+
+    const dx = e.changedTouches[0].clientX - start.x;
+    const dy = e.changedTouches[0].clientY - start.y;
+    const elapsed = Date.now() - start.time;
+
+    // Must be primarily horizontal, min 50px, within 500ms
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) || elapsed > 500) return;
+
+    if (dx < 0 && hasNext) {
+      navigateTo("left"); // swipe left = next post
+    } else if (dx > 0 && hasPrev) {
+      navigateTo("right"); // swipe right = prev post
+    }
+  }, [hasNext, hasPrev, navigateTo]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Top bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white border-b border-stone-200">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
+        {/* Position counter */}
+        {allEntries && allEntries.length > 1 && (
+          <span className="text-xs text-stone-400 font-medium">
+            {currentIndex + 1} / {allEntries.length}
+          </span>
+        )}
         <div className="flex items-center gap-1">
           {onToggleFavorite && (
             <Button
@@ -107,112 +169,119 @@ export function MemoryDetailView({
         </div>
       </div>
 
-      {/* Content */}
-      <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
-        {/* Header metadata (LTR) */}
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium text-stone-400">
-            {format(new Date(entry.date), "MMM d, yyyy")}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-stone-500">{babyName}</span>
-            {babyDob && (
-              <Badge variant="secondary" className="text-xs bg-white/70 text-stone-500 border-0">
-                {formatAgeAtDate(babyDob, entry.date)}
-              </Badge>
-            )}
-          </div>
-        </div>
-
-        {/* Full text (auto-direction) */}
-        {entry.description && (
-          <div
-            dir="auto"
-            className={`leading-relaxed text-zinc-800 ${isTextOnly ? "text-lg" : "text-base"} ${
-              isDialogue
-                ? "border-r-2 border-amber-300/60 pr-3 rounded-l-md py-2"
-                : ""
-            }`}
-          >
-            {isDialogue
-              ? parseDialogueText(entry.description)
-              : <p className="whitespace-pre-wrap">{entry.description}</p>
-            }
-          </div>
-        )}
-
-        {/* Visual media section */}
-        {(() => {
-          const albumImages: { id: string; url: string }[] = [];
-          if (hasHeroImage && !canPlayVideo) {
-            albumImages.push({ id: "hero", url: heroImageUrl! });
-          }
-          if (entry.entry_images) {
-            for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
-              const imgUrl = img.thumbnail_url
-                || (img.drive_file_id ? driveStreamUrl(img.drive_file_id) : null);
-              if (imgUrl) {
-                albumImages.push({ id: img.id, url: imgUrl });
-              }
-            }
-          }
-
-          if (canPlayVideo) {
-            return (
-              <div className="-mx-5 mt-2">
-                <DetailVideoPlayer
-                  fileId={entry.drive_file_id!}
-                  thumbnailUrl={entry.thumbnail_url}
-                />
-                {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
-              </div>
-            );
-          }
-
-          if (albumImages.length > 0) {
-            return (
-              <div className="-mx-5 mt-2">
-                <ImageAlbum images={albumImages} />
-              </div>
-            );
-          }
-
-          return null;
-        })()}
-
-        {/* Audio player */}
-        {hasAudio && (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-stone-50">
-            <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
-            <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className="flex items-center justify-between pt-2 border-t">
-          {entry.created_by_nickname && (
-            <p className="text-xs text-stone-400">
-              Added by {entry.created_by_nickname}
-            </p>
-          )}
-          {!entry.created_by_nickname && <div />}
-          {entry.entry_tags.length > 0 && (
-            <div className="flex flex-wrap gap-1 justify-end">
-              {entry.entry_tags.map((et) => (
-                <Badge
-                  key={et.tag_id}
-                  variant="secondary"
-                  className="text-xs"
-                  style={{
-                    backgroundColor: `${et.tags.color}20`,
-                    color: et.tags.color || undefined,
-                  }}
-                >
-                  {et.tags.name}
+      {/* Content with slide animation */}
+      <div
+        className={`transition-transform duration-150 ease-out ${
+          slideDirection === "left" ? "-translate-x-full opacity-0" :
+          slideDirection === "right" ? "translate-x-full opacity-0" : ""
+        }`}
+      >
+        <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
+          {/* Header metadata (LTR) */}
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-stone-400">
+              {format(new Date(entry.date), "MMM d, yyyy")}
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-medium text-stone-500">{babyName}</span>
+              {babyDob && (
+                <Badge variant="secondary" className="text-xs bg-white/70 text-stone-500 border-0">
+                  {formatAgeAtDate(babyDob, entry.date)}
                 </Badge>
-              ))}
+              )}
+            </div>
+          </div>
+
+          {/* Full text (auto-direction) */}
+          {entry.description && (
+            <div
+              dir="auto"
+              className={`leading-relaxed text-zinc-800 ${isTextOnly ? "text-lg" : "text-base"} ${
+                isDialogue
+                  ? "border-r-2 border-amber-300/60 pr-3 rounded-l-md py-2"
+                  : ""
+              }`}
+            >
+              {isDialogue
+                ? parseDialogueText(entry.description)
+                : <p className="whitespace-pre-wrap">{entry.description}</p>
+              }
             </div>
           )}
+
+          {/* Visual media section */}
+          {(() => {
+            const albumImages: { id: string; url: string }[] = [];
+            if (hasHeroImage && !canPlayVideo) {
+              albumImages.push({ id: "hero", url: heroImageUrl! });
+            }
+            if (entry.entry_images) {
+              for (const img of [...entry.entry_images].sort((a, b) => a.sort_order - b.sort_order)) {
+                const imgUrl = img.thumbnail_url
+                  || (img.drive_file_id ? driveStreamUrl(img.drive_file_id) : null);
+                if (imgUrl) {
+                  albumImages.push({ id: img.id, url: imgUrl });
+                }
+              }
+            }
+
+            if (canPlayVideo) {
+              return (
+                <div className="-mx-5 mt-2">
+                  <DetailVideoPlayer
+                    fileId={entry.drive_file_id!}
+                    thumbnailUrl={entry.thumbnail_url}
+                  />
+                  {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
+                </div>
+              );
+            }
+
+            if (albumImages.length > 0) {
+              return (
+                <div className="-mx-5 mt-2">
+                  <ImageAlbum images={albumImages} />
+                </div>
+              );
+            }
+
+            return null;
+          })()}
+
+          {/* Audio player */}
+          {hasAudio && (
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-stone-50">
+              <Mic className="h-4 w-4 text-muted-foreground shrink-0" />
+              <audio controls src={audioUrl!} className="w-full h-8" preload="metadata" />
+            </div>
+          )}
+
+          {/* Footer */}
+          <div className="flex items-center justify-between pt-2 border-t">
+            {entry.created_by_nickname && (
+              <p className="text-xs text-stone-400">
+                Added by {entry.created_by_nickname}
+              </p>
+            )}
+            {!entry.created_by_nickname && <div />}
+            {entry.entry_tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 justify-end">
+                {entry.entry_tags.map((et) => (
+                  <Badge
+                    key={et.tag_id}
+                    variant="secondary"
+                    className="text-xs"
+                    style={{
+                      backgroundColor: `${et.tags.color}20`,
+                      color: et.tags.color || undefined,
+                    }}
+                  >
+                    {et.tags.name}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
