@@ -2,7 +2,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
 
-export const APP_VERSION = 55;
-console.log("[BabyJournal] Build v55");
+export const APP_VERSION = 56;
+console.log("[BabyJournal] Build v56");
 
 createRoot(document.getElementById("root")!).render(<App />);

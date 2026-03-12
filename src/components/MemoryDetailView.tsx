@@ -84,6 +84,10 @@ export function MemoryDetailView({
     }, 150);
   }, [allEntries, currentIndex, onNavigate]);
 
+  // Stable ref for onClose so the history effect doesn't re-run on navigation
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   // Back button closes detail view
   const closedByBackRef = useRef(false);
   const pushedStateRef = useRef(false);
@@ -95,7 +99,7 @@ export function MemoryDetailView({
 
     const handlePopState = () => {
       closedByBackRef.current = true;
-      onClose();
+      onCloseRef.current();
     };
 
     window.addEventListener("popstate", handlePopState);
@@ -106,7 +110,7 @@ export function MemoryDetailView({
         window.history.back();
       }
     };
-  }, [onClose]);
+  }, []);
 
   // Swipe gesture for post navigation
   const touchStartX = useRef<number | null>(null);
@@ -137,6 +141,7 @@ export function MemoryDetailView({
   return (
     <div
       className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
+      style={{ touchAction: "pan-y" }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
     >
@@ -145,12 +150,6 @@ export function MemoryDetailView({
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
-        {/* Position counter */}
-        {allEntries && allEntries.length > 1 && (
-          <span className="text-xs text-stone-400 font-medium">
-            {currentIndex + 1} / {allEntries.length}
-          </span>
-        )}
         <div className="flex items-center gap-1">
           {onToggleFavorite && (
             <Button
