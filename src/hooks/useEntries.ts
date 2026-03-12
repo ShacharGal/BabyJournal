@@ -220,6 +220,20 @@ export function useDeleteEntry() {
   });
 }
 
+export function useAllNicknames() {
+  return useQuery({
+    queryKey: ["all-nicknames"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_users_public" as any)
+        .select("nickname");
+      if (error) throw error;
+      return (data ?? []).map((u: any) => u.nickname as string);
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
 export function useEntryContributors() {
   return useQuery({
     queryKey: ["entry-contributors"],

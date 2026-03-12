@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useEntries, useDeleteEntry, type EntryWithTags } from "@/hooks/useEntries";
+import { useEntries, useDeleteEntry, useAllNicknames, type EntryWithTags } from "@/hooks/useEntries";
 import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
@@ -12,6 +12,7 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
 import { MemoryDetailView } from "@/components/MemoryDetailView";
 import { parseDialogueText } from "@/lib/dialogueParser";
+import { parseMentions } from "@/lib/mentionParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks/useFavorites";
 
@@ -66,6 +67,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const { canEdit, canAdd, user } = useAuthContext();
   const { data: favoriteIds = new Set<string>() } = useFavoriteIds(user?.id);
   const toggleFavorite = useToggleFavorite();
+  const { data: allNicknames = [] } = useAllNicknames();
   const [detailEntry, setDetailEntry] = useState<EntryWithTags | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -332,6 +334,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
                     if (!user?.id) return;
                     toggleFavorite.mutate({ entryId, userId: user.id, isFavorited: favoriteIds.has(entryId) });
                   }}
+                  nicknames={allNicknames}
                 />
               </div>
             ))}
@@ -368,6 +371,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
           }}
           allEntries={filteredEntries}
           onNavigate={setDetailEntry}
+          nicknames={allNicknames}
         />
       )}
     </>
@@ -386,9 +390,10 @@ export interface MemoryCardProps {
   onExpand: (entry: EntryWithTags) => void;
   isFavorited?: boolean;
   onToggleFavorite?: (entryId: string) => void;
+  nicknames?: string[];
 }
 
-export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite }: MemoryCardProps) {
+export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite, nicknames = [] }: MemoryCardProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
@@ -481,8 +486,8 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
               }`}
             >
               {isDialogue
-                ? parseDialogueText(entry.description)
-                : entry.description
+                ? parseDialogueText(entry.description, nicknames)
+                : parseMentions(entry.description, nicknames)
               }
             </div>
           ) : (

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
+import { parseMentions } from "@/lib/mentionParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
 import type { EntryWithTags } from "@/hooks/useEntries";
 
@@ -37,6 +38,7 @@ interface MemoryDetailViewProps {
   onToggleFavorite?: () => void;
   allEntries?: EntryWithTags[];
   onNavigate?: (entry: EntryWithTags) => void;
+  nicknames?: string[];
 }
 
 export function MemoryDetailView({
@@ -51,6 +53,7 @@ export function MemoryDetailView({
   onToggleFavorite,
   allEntries,
   onNavigate,
+  nicknames = [],
 }: MemoryDetailViewProps) {
   const audioUrl = (entry as any).audio_url as string | null;
   const hasThumbnail = !!entry.thumbnail_url;
@@ -223,8 +226,8 @@ export function MemoryDetailView({
               }`}
             >
               {isDialogue
-                ? parseDialogueText(entry.description)
-                : <p className="whitespace-pre-wrap">{entry.description}</p>
+                ? parseDialogueText(entry.description, nicknames)
+                : <p className="whitespace-pre-wrap">{parseMentions(entry.description, nicknames)}</p>
               }
             </div>
           )}

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBabies } from "@/hooks/useBabies";
-import { useCreateEntry, useUpdateEntry, type EntryWithTags } from "@/hooks/useEntries";
+import { useCreateEntry, useUpdateEntry, useAllNicknames, type EntryWithTags } from "@/hooks/useEntries";
 import { useGoogleConnection, useUploadToDrive, useDeleteFromDrive } from "@/hooks/useGoogleDrive";
 import { TagCombobox } from "@/components/TagCombobox";
 import { toast } from "@/hooks/use-toast";
@@ -83,6 +83,10 @@ export function AddMemoryDialog({
   const { user } = useAuthContext();
 
   const deleteFromDrive = useDeleteFromDrive();
+  const { data: allNicknames = [] } = useAllNicknames();
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionIndex, setMentionIndex] = useState(0);
   const isEditing = !!editEntry;
   const isConnected = !!googleConnection?.refresh_token;
   const selectedBaby = babies?.find((b) => b.id === selectedBabyId);
@@ -484,6 +488,66 @@ export function AddMemoryDialog({
     setSecondaryFiles((prev) => [...prev, ...files.slice(0, remaining)]);
     if (secondaryInputRef.current) secondaryInputRef.current.value = "";
   };
+
+  // @-mention autocomplete logic
+  const filteredMentions = mentionQuery !== null
+    ? allNicknames.filter((n) => n.toLowerCase().startsWith(mentionQuery.toLowerCase())).slice(0, 5)
+    : [];
+
+  const handleDescriptionChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setDescription(val);
+
+    // Check for @mention trigger
+    const cursorPos = e.target.selectionStart;
+    const textBeforeCursor = val.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (atMatch) {
+      setMentionQuery(atMatch[1]);
+      setMentionIndex(0);
+    } else {
+      setMentionQuery(null);
+    }
+  }, []);
+
+  const insertMention = useCallback((nickname: string) => {
+    const textarea = descriptionRef.current;
+    if (!textarea) return;
+
+    const cursorPos = textarea.selectionStart;
+    const textBeforeCursor = description.slice(0, cursorPos);
+    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    if (!atMatch) return;
+
+    const start = cursorPos - atMatch[0].length;
+    const newText = description.slice(0, start) + "@" + nickname + " " + description.slice(cursorPos);
+    setDescription(newText);
+    setMentionQuery(null);
+
+    // Restore cursor position after React re-render
+    const newCursorPos = start + nickname.length + 2; // +2 for @ and space
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }, [description]);
+
+  const handleDescriptionKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentionQuery === null || filteredMentions.length === 0) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setMentionIndex((i) => (i + 1) % filteredMentions.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setMentionIndex((i) => (i - 1 + filteredMentions.length) % filteredMentions.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      insertMention(filteredMentions[mentionIndex]);
+    } else if (e.key === "Escape") {
+      setMentionQuery(null);
+    }
+  }, [mentionQuery, filteredMentions, mentionIndex, insertMention]);
 
   const TypeIcon = file ? typeIcons[getFileType(file.type)] : Upload;
   const existingAudioName = isEditing ? (editEntry as any)?.audio_file_name : null;
@@ -1022,15 +1086,36 @@ export function AddMemoryDialog({
           </div>
 
           {/* Description */}
-          <div>
+          <div className="relative">
             <label className="text-sm font-medium mb-2 block">Description</label>
             <Textarea
+              ref={descriptionRef}
               dir="auto"
-              placeholder="What's happening in this memory?"
+              placeholder="What's happening in this memory? Use @ to mention someone"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
+              onChange={handleDescriptionChange}
+              onKeyDown={handleDescriptionKeyDown}
               rows={3}
             />
+            {mentionQuery !== null && filteredMentions.length > 0 && (
+              <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-stone-200 rounded-lg shadow-lg overflow-hidden">
+                {filteredMentions.map((nickname, i) => (
+                  <button
+                    key={nickname}
+                    type="button"
+                    className={`w-full text-left px-3 py-2 text-sm ${
+                      i === mentionIndex ? "bg-blue-50 text-blue-700" : "hover:bg-stone-50"
+                    }`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      insertMention(nickname);
+                    }}
+                  >
+                    @{nickname}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tags */}
