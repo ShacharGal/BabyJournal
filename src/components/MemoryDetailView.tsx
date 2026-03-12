@@ -192,8 +192,8 @@ export function MemoryDetailView({
       {/* Content with slide animation */}
       <div
         className={`transition-transform duration-150 ease-out ${
-          slideDirection === "next" ? "-translate-x-full opacity-0" :
-          slideDirection === "prev" ? "translate-x-full opacity-0" : ""
+          slideDirection === "next" ? "translate-x-full opacity-0" :
+          slideDirection === "prev" ? "-translate-x-full opacity-0" : ""
         }`}
       >
         <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
@@ -252,7 +252,7 @@ export function MemoryDetailView({
                     fileId={entry.drive_file_id!}
                     thumbnailUrl={entry.thumbnail_url}
                   />
-                  {albumImages.length > 0 && <ImageAlbum images={albumImages} />}
+                  {albumImages.length > 0 && <ImageAlbum key={entry.id} images={albumImages} />}
                 </div>
               );
             }
@@ -260,7 +260,7 @@ export function MemoryDetailView({
             if (albumImages.length > 0) {
               return (
                 <div className="-mx-5 mt-2">
-                  <ImageAlbum images={albumImages} />
+                  <ImageAlbum key={entry.id} images={albumImages} />
                 </div>
               );
             }
@@ -319,26 +319,26 @@ function ImageAlbum({ images }: { images: { id: string; url: string }[] }) {
         alt=""
         className="w-full max-h-[70vh] object-contain"
       />
-      {/* Chevron buttons */}
-      {images.length > 1 && activeIndex > 0 && (
-        <button
-          className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-          onClick={() => setActiveIndex((i) => i - 1)}
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-      )}
-      {images.length > 1 && activeIndex < images.length - 1 && (
-        <button
-          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
-          onTouchStart={(e) => e.stopPropagation()}
-          onTouchEnd={(e) => e.stopPropagation()}
-          onClick={() => setActiveIndex((i) => i + 1)}
-        >
-          <ChevronRight className="h-5 w-5" />
-        </button>
+      {/* Chevron buttons (infinite wrap) */}
+      {images.length > 1 && (
+        <>
+          <button
+            className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onClick={() => setActiveIndex((i) => (i - 1 + images.length) % images.length)}
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+            onClick={() => setActiveIndex((i) => (i + 1) % images.length)}
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </>
       )}
       {/* Dot indicators */}
       {images.length > 1 && (
