@@ -108,38 +108,48 @@ export function MemoryDetailView({
     };
   }, [onClose]);
 
+  // Swipe gesture for post navigation
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }, []);
+
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    touchStartX.current = null;
+    touchStartY.current = null;
+
+    // Only trigger if horizontal swipe is dominant and > 60px
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0 && hasNext) {
+        navigateTo("next");
+      } else if (dx > 0 && hasPrev) {
+        navigateTo("prev");
+      }
+    }
+  }, [hasNext, hasPrev, navigateTo]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
+    <div
+      className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Top bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white border-b border-stone-200">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
-        {/* Navigation: prev / counter / next */}
+        {/* Position counter */}
         {allEntries && allEntries.length > 1 && (
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={!hasPrev}
-              onClick={() => navigateTo("prev")}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-xs text-stone-400 font-medium min-w-[3rem] text-center">
-              {currentIndex + 1} / {allEntries.length}
-            </span>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              disabled={!hasNext}
-              onClick={() => navigateTo("next")}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <span className="text-xs text-stone-400 font-medium">
+            {currentIndex + 1} / {allEntries.length}
+          </span>
         )}
         <div className="flex items-center gap-1">
           {onToggleFavorite && (
@@ -300,36 +310,37 @@ export function MemoryDetailView({
 }
 
 function ImageAlbum({ images }: { images: { id: string; url: string }[] }) {
-  const scrollRef = useRef<HTMLDivElement>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const scrollLeft = el.scrollLeft;
-    const width = el.clientWidth;
-    const index = Math.round(scrollLeft / width);
-    setActiveIndex(index);
-  }, []);
 
   return (
     <div className="relative">
-      <div
-        ref={scrollRef}
-        onScroll={handleScroll}
-        className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {images.map((img) => (
-          <div key={img.id} className="w-full shrink-0 snap-center">
-            <img
-              src={img.url}
-              alt=""
-              className="w-full max-h-[70vh] object-contain"
-            />
-          </div>
-        ))}
-      </div>
+      {/* Single image display */}
+      <img
+        src={images[activeIndex].url}
+        alt=""
+        className="w-full max-h-[70vh] object-contain"
+      />
+      {/* Chevron buttons */}
+      {images.length > 1 && activeIndex > 0 && (
+        <button
+          className="absolute left-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+          onClick={() => setActiveIndex((i) => i - 1)}
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+      )}
+      {images.length > 1 && activeIndex < images.length - 1 && (
+        <button
+          className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-full bg-black/20 backdrop-blur text-white"
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+          onClick={() => setActiveIndex((i) => i + 1)}
+        >
+          <ChevronRight className="h-5 w-5" />
+        </button>
+      )}
       {/* Dot indicators */}
       {images.length > 1 && (
         <div className="flex justify-center gap-1.5 py-2">
