@@ -1,11 +1,9 @@
 import React from "react";
 
-// Matches @ followed by word characters (Unicode-aware: Hebrew, Latin, digits, underscores)
-const MENTION_REGEX = /@([\p{L}\p{N}_]+)/gu;
-
 /**
  * Parses @mentions in text and highlights known nicknames.
- * Returns an array of React nodes with styled spans for known mentions.
+ * Handles nicknames with spaces/parens like "Shachar (Dad)".
+ * Looks for @ followed by any known nickname (case-insensitive).
  */
 export function parseMentions(
   text: string,
@@ -15,40 +13,58 @@ export function parseMentions(
     return [text];
   }
 
-  const lowerNicknames = new Set(knownNicknames.map((n) => n.toLowerCase()));
+  // Sort by length descending so longer nicknames match first
+  const sorted = [...knownNicknames].sort((a, b) => b.length - a.length);
+
   const parts: React.ReactNode[] = [];
-  let lastIndex = 0;
-  let match: RegExpExecArray | null;
+  let remaining = text;
   let key = 0;
 
-  // Reset regex state
-  MENTION_REGEX.lastIndex = 0;
-
-  while ((match = MENTION_REGEX.exec(text)) !== null) {
-    const nickname = match[1];
-    if (!lowerNicknames.has(nickname.toLowerCase())) continue;
-
-    // Add text before this match
-    if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+  while (remaining.length > 0) {
+    // Find the next @ symbol
+    const atIndex = remaining.indexOf("@");
+    if (atIndex === -1) {
+      parts.push(remaining);
+      break;
     }
 
-    parts.push(
-      <span
-        key={`mention-${key++}`}
-        className="bg-blue-100 text-blue-700 rounded px-1 font-medium"
-      >
-        @{nickname}
-      </span>
-    );
+    // Add text before @
+    if (atIndex > 0) {
+      parts.push(remaining.slice(0, atIndex));
+    }
 
-    lastIndex = match.index + match[0].length;
+    // Check if any known nickname follows the @
+    const afterAt = remaining.slice(atIndex + 1);
+    let matched = false;
+
+    for (const nickname of sorted) {
+      if (afterAt.toLowerCase().startsWith(nickname.toLowerCase())) {
+        // Check that the character after the nickname is a word boundary
+        // (end of string, space, punctuation, newline, etc.)
+        const charAfter = afterAt[nickname.length];
+        const isWordBoundary = !charAfter || /[\s.,!?;:\n\r)(\]}]/.test(charAfter);
+        if (!isWordBoundary) continue;
+
+        parts.push(
+          <span
+            key={`mention-${key++}`}
+            className="bg-blue-100 text-blue-700 rounded px-1 font-medium"
+          >
+            @{afterAt.slice(0, nickname.length)}
+          </span>
+        );
+        remaining = remaining.slice(atIndex + 1 + nickname.length);
+        matched = true;
+        break;
+      }
+    }
+
+    if (!matched) {
+      // Not a known mention — keep the @ as plain text
+      parts.push("@");
+      remaining = remaining.slice(atIndex + 1);
+    }
   }
 
-  // Add remaining text
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
-  }
-
-  return parts.length > 0 ? parts : [text];
+  return parts;
 }
