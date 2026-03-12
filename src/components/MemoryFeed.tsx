@@ -110,6 +110,10 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     if (filters.entryType && entry.type !== filters.entryType) return false;
     if (filters.postType && (entry as any).post_type !== filters.postType) return false;
     if (filters.contributorId && entry.created_by !== filters.contributorId) return false;
+    if (filters.mentionedNickname) {
+      const pattern = new RegExp(`@${filters.mentionedNickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\p{L})`, "iu");
+      if (!entry.description || !pattern.test(entry.description)) return false;
+    }
     return true;
   });
 

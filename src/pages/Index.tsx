@@ -11,7 +11,7 @@ import type { Filters } from "@/components/SearchFilters";
 
 const Index = () => {
   const [selectedBabyId, setSelectedBabyId] = useState<string | undefined>(undefined);
-  const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "", entryType: "", postType: "", contributorId: "" });
+  const [filters, setFilters] = useState<Filters>({ text: "", tagIds: [], dateFrom: "", dateTo: "", entryType: "", postType: "", contributorId: "", mentionedNickname: "" });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
