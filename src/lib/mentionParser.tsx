@@ -1,5 +1,8 @@
 import React from "react";
 
+// Matches @ followed by word characters (Unicode-aware: Hebrew, Latin, digits, underscores)
+const MENTION_REGEX = /@([\p{L}\p{N}_]+)/gu;
+
 /**
  * Parses @mentions in text and highlights known nicknames.
  * Returns an array of React nodes with styled spans for known mentions.
@@ -14,12 +17,14 @@ export function parseMentions(
 
   const lowerNicknames = new Set(knownNicknames.map((n) => n.toLowerCase()));
   const parts: React.ReactNode[] = [];
-  const regex = /@(\w+)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
   let key = 0;
 
-  while ((match = regex.exec(text)) !== null) {
+  // Reset regex state
+  MENTION_REGEX.lastIndex = 0;
+
+  while ((match = MENTION_REGEX.exec(text)) !== null) {
     const nickname = match[1];
     if (!lowerNicknames.has(nickname.toLowerCase())) continue;
 

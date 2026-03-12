@@ -227,8 +227,13 @@ export function useAllNicknames() {
       const { data, error } = await supabase
         .from("app_users_public" as any)
         .select("nickname");
-      if (error) throw error;
-      return (data ?? []).map((u: any) => u.nickname as string);
+      if (error) {
+        console.error("[Mentions] Failed to fetch nicknames:", error);
+        throw error;
+      }
+      const nicknames = (data ?? []).map((u: any) => u.nickname as string);
+      console.log("[Mentions] Loaded nicknames:", nicknames);
+      return nicknames;
     },
     staleTime: 5 * 60 * 1000,
   });

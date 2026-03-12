@@ -501,7 +501,7 @@ export function AddMemoryDialog({
     // Check for @mention trigger
     const cursorPos = e.target.selectionStart;
     const textBeforeCursor = val.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    const atMatch = textBeforeCursor.match(/@([\p{L}\p{N}_]*)$/u);
     if (atMatch) {
       setMentionQuery(atMatch[1]);
       setMentionIndex(0);
@@ -516,7 +516,7 @@ export function AddMemoryDialog({
 
     const cursorPos = textarea.selectionStart;
     const textBeforeCursor = description.slice(0, cursorPos);
-    const atMatch = textBeforeCursor.match(/@(\w*)$/);
+    const atMatch = textBeforeCursor.match(/@([\p{L}\p{N}_]*)$/u);
     if (!atMatch) return;
 
     const start = cursorPos - atMatch[0].length;
