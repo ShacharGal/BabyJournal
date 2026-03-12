@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic, Heart } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
@@ -65,70 +65,81 @@ export function MemoryDetailView({
   const hasHeroImage = !!heroImageUrl;
   const isTextOnly = !hasHeroImage && !canPlayVideo && !hasAudio;
 
-  // Swipe navigation
-  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
-  const [slideDirection, setSlideDirection] = useState<"left" | "right" | null>(null);
+  // Button navigation between posts
+  const [slideDirection, setSlideDirection] = useState<"next" | "prev" | null>(null);
 
   const currentIndex = allEntries ? allEntries.findIndex((e) => e.id === entry.id) : -1;
   const hasPrev = currentIndex > 0;
   const hasNext = allEntries ? currentIndex < allEntries.length - 1 : false;
 
-  const navigateTo = useCallback((direction: "left" | "right") => {
+  const navigateTo = useCallback((direction: "next" | "prev") => {
     if (!allEntries || !onNavigate) return;
-    const targetIndex = direction === "left" ? currentIndex + 1 : currentIndex - 1;
+    const targetIndex = direction === "next" ? currentIndex + 1 : currentIndex - 1;
     if (targetIndex < 0 || targetIndex >= allEntries.length) return;
 
     setSlideDirection(direction);
-    // Small delay for the slide-out animation, then navigate
     setTimeout(() => {
       onNavigate(allEntries[targetIndex]);
       setSlideDirection(null);
     }, 150);
   }, [allEntries, currentIndex, onNavigate]);
 
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    touchStartRef.current = {
-      x: e.touches[0].clientX,
-      y: e.touches[0].clientY,
-      time: Date.now(),
+  // Back button closes detail view
+  const closedByBackRef = useRef(false);
+  const pushedStateRef = useRef(false);
+
+  useEffect(() => {
+    // Push a history entry so back button closes the detail view
+    window.history.pushState({ detailView: true }, "");
+    pushedStateRef.current = true;
+
+    const handlePopState = () => {
+      closedByBackRef.current = true;
+      onClose();
     };
-  }, []);
 
-  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
-    const start = touchStartRef.current;
-    if (!start) return;
-    touchStartRef.current = null;
-
-    const dx = e.changedTouches[0].clientX - start.x;
-    const dy = e.changedTouches[0].clientY - start.y;
-    const elapsed = Date.now() - start.time;
-
-    // Must be primarily horizontal, min 50px, within 500ms
-    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx) || elapsed > 500) return;
-
-    if (dx < 0 && hasNext) {
-      navigateTo("left"); // swipe left = next post
-    } else if (dx > 0 && hasPrev) {
-      navigateTo("right"); // swipe right = prev post
-    }
-  }, [hasNext, hasPrev, navigateTo]);
+    window.addEventListener("popstate", handlePopState);
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+      // If closing via X button (not back button), pop the state we pushed
+      if (pushedStateRef.current && !closedByBackRef.current) {
+        window.history.back();
+      }
+    };
+  }, [onClose]);
 
   return (
-    <div
-      className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto">
       {/* Top bar */}
       <div className="sticky top-0 z-10 flex items-center justify-between p-3 bg-white border-b border-stone-200">
         <Button variant="ghost" size="icon" onClick={onClose}>
           <X className="h-5 w-5" />
         </Button>
-        {/* Position counter */}
+        {/* Navigation: prev / counter / next */}
         {allEntries && allEntries.length > 1 && (
-          <span className="text-xs text-stone-400 font-medium">
-            {currentIndex + 1} / {allEntries.length}
-          </span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={!hasPrev}
+              onClick={() => navigateTo("prev")}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-xs text-stone-400 font-medium min-w-[3rem] text-center">
+              {currentIndex + 1} / {allEntries.length}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              disabled={!hasNext}
+              onClick={() => navigateTo("next")}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
         )}
         <div className="flex items-center gap-1">
           {onToggleFavorite && (
@@ -172,8 +183,8 @@ export function MemoryDetailView({
       {/* Content with slide animation */}
       <div
         className={`transition-transform duration-150 ease-out ${
-          slideDirection === "left" ? "-translate-x-full opacity-0" :
-          slideDirection === "right" ? "translate-x-full opacity-0" : ""
+          slideDirection === "next" ? "-translate-x-full opacity-0" :
+          slideDirection === "prev" ? "translate-x-full opacity-0" : ""
         }`}
       >
         <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
