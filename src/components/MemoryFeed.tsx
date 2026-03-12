@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Heart, Calendar, Maximize2, Volume2, ChevronLeft, ChevronRight, User,
+  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -404,7 +404,10 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
   const showSplit = hasMedia || hasAudioOnly;
 
   return (
-    <div className="rounded-xl border border-white/80 bg-white/45 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden">
+    <div
+      className="rounded-xl border border-white/80 bg-white/45 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+      onClick={() => onExpand(entry)}
+    >
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-6 pt-5 pb-1">
         <span className="text-[11px] font-medium text-stone-400">
@@ -490,13 +493,6 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
       <div className="flex items-center justify-between px-6 pb-5 pt-1 gap-2">
         {/* Left side (LTR): Expand icon + heart + contributor */}
         <div className="flex items-center gap-2 text-stone-400 shrink-0">
-          <button
-            onClick={() => onExpand(entry)}
-            className="p-1 hover:text-stone-600 transition-colors"
-            title="Expand"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
           {onToggleFavorite && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleFavorite(entry.id); }}
