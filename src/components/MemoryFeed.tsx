@@ -4,7 +4,8 @@ import { Button } from "@/components/ui/button";
 import { useEntries, useDeleteEntry, useAllNicknames, type EntryWithTags } from "@/hooks/useEntries";
 import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
-import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
+import { format } from "date-fns";
+import { formatAgeAtDate } from "@/lib/ageFormatter";
 import {
   Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User, Star,
 } from "lucide-react";
@@ -34,23 +35,6 @@ function getTagColor(tagName: string): string {
   return EARTH_TONE_COLORS[Math.abs(hash) % EARTH_TONE_COLORS.length];
 }
 
-function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
-  const dob = new Date(dateOfBirth);
-  const d = new Date(memoryDate);
-  const months = differenceInMonths(d, dob);
-  if (months < 1) {
-    const days = differenceInDays(d, dob);
-    return `${days} day${days !== 1 ? "s" : ""} old`;
-  }
-  if (months < 24) {
-    return `${months} month${months !== 1 ? "s" : ""} old`;
-  }
-  const years = differenceInYears(d, dob);
-  const rem = months - years * 12;
-  return rem > 0
-    ? `${years}y ${rem}m old`
-    : `${years} year${years !== 1 ? "s" : ""} old`;
-}
 
 interface MemoryFeedProps {
   babyId?: string;
