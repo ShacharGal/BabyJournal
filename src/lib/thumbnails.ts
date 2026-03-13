@@ -104,6 +104,11 @@ function captureVideoFrame(file: File): Promise<Blob> {
     };
 
     video.onseeked = () => {
+      if (!video.videoWidth || !video.videoHeight) {
+        URL.revokeObjectURL(url);
+        reject(new Error("Video has zero dimensions"));
+        return;
+      }
       const canvas = document.createElement("canvas");
       canvas.width = Math.min(video.videoWidth, MAX_THUMB_WIDTH);
       const scale = canvas.width / video.videoWidth;
@@ -139,6 +144,10 @@ function resizeImage(file: File, maxWidth: number, quality: number): Promise<Blo
 
     img.onload = () => {
       URL.revokeObjectURL(url);
+      if (!img.width || !img.height) {
+        reject(new Error("Image has zero dimensions"));
+        return;
+      }
       const scale = Math.min(1, maxWidth / img.width);
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);
