@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           nickname: string
+          notification_pref: string
           password: string
           permission: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           nickname: string
+          notification_pref?: string
           password: string
           permission?: string
         }
@@ -33,10 +35,46 @@ export type Database = {
           created_at?: string
           id?: string
           nickname?: string
+          notification_pref?: string
           password?: string
           permission?: string
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       babies: {
         Row: {

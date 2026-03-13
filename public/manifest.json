@@ -1,0 +1,11 @@
+{
+  "name": "BabyJournal",
+  "short_name": "BabyJournal",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#fbc00b",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

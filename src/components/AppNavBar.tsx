@@ -31,6 +31,7 @@ import {
 import { GoogleDriveConnect } from "@/components/GoogleDriveConnect";
 import { AddChildForm } from "@/components/AddChildForm";
 import { UserManagement } from "@/components/UserManagement";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { SearchFilters, type Filters } from "@/components/SearchFilters";
 import { useGoogleConnection } from "@/hooks/useGoogleDrive";
 import { APP_VERSION } from "@/main";
@@ -190,6 +191,7 @@ export function AppNavBar({
               </Button>
             </div>
 
+            <NotificationSettings />
             {canEdit && <GoogleDriveConnect />}
             {canEdit && <AddChildForm />}
             {canEdit && <UserManagement />}

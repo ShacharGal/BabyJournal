@@ -346,6 +346,16 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
     if (!newEntry?.id) throw new Error("Failed to create entry");
 
+    // Send push notifications (fire and forget)
+    supabase.functions.invoke("send-push", {
+      body: {
+        babyName: selectedBaby?.name || "your baby",
+        description: formData.description,
+        postedByUserId: user?.id,
+        postedByNickname: user?.nickname,
+      },
+    }).catch((err) => console.error("[SendPush] Failed:", err));
+
     const uploads: Promise<void>[] = [];
 
     if (formData.file) {
