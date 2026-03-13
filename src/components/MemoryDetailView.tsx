@@ -142,6 +142,12 @@ export function MemoryDetailView({
     }
   }, [hasNext, hasPrev, navigateTo]);
 
+  // Lock background scroll while detail view is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
@@ -202,7 +208,7 @@ export function MemoryDetailView({
       >
         <div className={`mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl shadow-lg shadow-black/[0.05] ${
           isMilestone
-            ? "bg-[#fcdd9d]/30 border border-[#e8c87a]/60"
+            ? "bg-[#fce8b2] border border-[#e8c87a]/60"
             : "bg-white border border-stone-200"
         }`}>
           {/* Header metadata (LTR) */}
