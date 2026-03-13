@@ -62,7 +62,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   const isEditing = !!editEntry;
   const isConnected = !!googleConnection?.refresh_token;
   const selectedBaby = babies?.find((b) => b.id === selectedBabyId);
-  const existingAudioName = isEditing ? (editEntry as any)?.audio_file_name : null;
+  const existingAudioName = isEditing ? editEntry?.audio_file_name : null;
   const hasRecording = !!recorder.blob;
   const hasAnyAudio = !!audioFile || hasRecording;
 
@@ -73,7 +73,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
       setSelectedBabyId(editEntry.baby_id);
       setDescription(editEntry.description || "");
       setDate(editEntry.date);
-      setPostType(((editEntry as any).post_type as "standard" | "dialogue") || "standard");
+      setPostType((editEntry.post_type as "standard" | "dialogue" | "milestone") || "standard");
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
       setSecondaryFiles([]);
@@ -340,7 +340,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
         mime_type: formData.file?.type,
         created_by: user?.id,
         app_version: APP_VERSION,
-      } as any,
+      },
       tagIds: formData.tags,
     });
 
@@ -377,7 +377,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
         uploadAudioFile(formData.effectiveAudio, newEntry.id).then(async ({ storagePath, publicUrl }) => {
           await updateEntry.mutateAsync({
             entryId: newEntry.id,
-            entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: formData.effectiveAudio!.name, audio_file_size: formData.effectiveAudio!.size } as any,
+            entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: formData.effectiveAudio!.name, audio_file_size: formData.effectiveAudio!.size },
           });
         })
       );
@@ -461,15 +461,15 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   };
 
   const handleAudioUpdate = async (entryId: string, entry: EntryWithTags, effectiveAudio: File | null, shouldRemove: boolean) => {
-    const hadAudio = !!(entry as any).audio_storage_path;
+    const hadAudio = !!entry.audio_storage_path;
     if (hadAudio && (effectiveAudio || shouldRemove)) {
-      try { await deleteAudio((entry as any).audio_storage_path); } catch (e) { console.warn(e); }
+      try { await deleteAudio(entry.audio_storage_path!); } catch (e) { console.warn(e); }
     }
     if (effectiveAudio) {
       const { storagePath, publicUrl } = await uploadAudioFile(effectiveAudio, entryId);
-      await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: effectiveAudio.name, audio_file_size: effectiveAudio.size } as any });
+      await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: storagePath, audio_url: publicUrl, audio_file_name: effectiveAudio.name, audio_file_size: effectiveAudio.size } });
     } else if (shouldRemove && hadAudio) {
-      await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: null, audio_url: null, audio_file_name: null, audio_file_size: null } as any });
+      await updateEntry.mutateAsync({ entryId, entry: { audio_storage_path: null, audio_url: null, audio_file_name: null, audio_file_size: null } });
     }
   };
 

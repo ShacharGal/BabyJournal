@@ -39,14 +39,14 @@ export function MemoryDetailView({
   onNavigate,
   nicknames = [],
 }: MemoryDetailViewProps) {
-  const audioUrl = (entry as any).audio_url as string | null;
+  const audioUrl = entry.audio_url;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
   const isVideo = entry.type === "video";
   const canPlayVideo = isVideo && !!entry.drive_file_id;
   const hasAudio = !!audioUrl;
-  const isDialogue = (entry as any).post_type === "dialogue";
-  const isMilestone = (entry as any).post_type === "milestone";
+  const isDialogue = entry.post_type === "dialogue";
+  const isMilestone = entry.post_type === "milestone";
   // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
   const heroImageUrl = entry.thumbnail_url
     || (isPhoto && entry.drive_file_id ? driveStreamUrl(entry.drive_file_id) : null);

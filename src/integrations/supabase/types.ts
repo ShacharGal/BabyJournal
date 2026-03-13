@@ -105,6 +105,7 @@ export type Database = {
       }
       entries: {
         Row: {
+          app_version: number | null
           audio_file_name: string | null
           audio_file_size: number | null
           audio_storage_path: string | null
@@ -126,6 +127,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          app_version?: number | null
           audio_file_name?: string | null
           audio_file_size?: number | null
           audio_storage_path?: string | null
@@ -147,6 +149,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          app_version?: number | null
           audio_file_name?: string | null
           audio_file_size?: number | null
           audio_storage_path?: string | null
@@ -222,6 +225,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "entry_images_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entry_favorites: {
+        Row: {
+          id: string
+          entry_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          entry_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          entry_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_favorites_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "entries"

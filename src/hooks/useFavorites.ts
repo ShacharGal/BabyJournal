@@ -6,12 +6,12 @@ export function useFavoriteIds(userId: string | undefined) {
   return useQuery({
     queryKey: ["favorites", userId],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("entry_favorites")
         .select("entry_id")
         .eq("user_id", userId);
       if (error) throw error;
-      return new Set<string>((data ?? []).map((r: any) => r.entry_id as string));
+      return new Set<string>((data ?? []).map((r) => r.entry_id));
     },
     enabled: !!userId,
   });
@@ -30,7 +30,7 @@ export function useToggleFavorite() {
       isFavorited: boolean;
     }) => {
       if (isFavorited) {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("entry_favorites")
           .delete()
           .eq("entry_id", entryId)
@@ -40,7 +40,7 @@ export function useToggleFavorite() {
           throw error;
         }
       } else {
-        const { error } = await (supabase as any)
+        const { error } = await supabase
           .from("entry_favorites")
           .insert({ entry_id: entryId, user_id: userId });
         if (error) {
@@ -86,7 +86,7 @@ export function useFavoritedEntries(userId: string | undefined, favoriteIds: Set
         .order("date", { ascending: false });
       if (error) throw error;
 
-      const rows = data as any[];
+      const rows = data ?? [];
       const creatorIds = Array.from(
         new Set(rows.map((row) => row.created_by).filter(Boolean))
       ) as string[];
@@ -98,7 +98,7 @@ export function useFavoritedEntries(userId: string | undefined, favoriteIds: Set
           .select("id, nickname")
           .in("id", creatorIds);
         if (creatorsError) throw creatorsError;
-        (creators ?? []).forEach((creator: any) => {
+        ((creators ?? []) as { id: string; nickname: string }[]).forEach((creator) => {
           nicknameByUserId.set(creator.id, creator.nickname);
         });
       }

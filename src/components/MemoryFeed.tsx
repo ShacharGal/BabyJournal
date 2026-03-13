@@ -92,7 +92,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     if (filters.dateFrom && entry.date < filters.dateFrom) return false;
     if (filters.dateTo && entry.date > filters.dateTo) return false;
     if (filters.entryType && entry.type !== filters.entryType) return false;
-    if (filters.postType && (entry as any).post_type !== filters.postType) return false;
+    if (filters.postType && entry.post_type !== filters.postType) return false;
     if (filters.contributorId && entry.created_by !== filters.contributorId) return false;
     if (filters.mentionedNickname) {
       const pattern = new RegExp(`@${filters.mentionedNickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\p{L})`, "iu");
@@ -382,13 +382,13 @@ export interface MemoryCardProps {
 }
 
 export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite, nicknames = [] }: MemoryCardProps) {
-  const audioUrl = (entry as any).audio_url as string | null;
+  const audioUrl = entry.audio_url;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
   const isVideo = entry.type === "video";
   const hasAudio = !!audioUrl;
-  const isDialogue = (entry as any).post_type === "dialogue";
-  const isMilestone = (entry as any).post_type === "milestone";
+  const isDialogue = entry.post_type === "dialogue";
+  const isMilestone = entry.post_type === "milestone";
 
   // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
   const displayImageUrl = entry.thumbnail_url
