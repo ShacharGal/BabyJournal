@@ -6,7 +6,7 @@ import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import {
-  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User,
+  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User, Star,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -404,6 +404,7 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
   const isVideo = entry.type === "video";
   const hasAudio = !!audioUrl;
   const isDialogue = (entry as any).post_type === "dialogue";
+  const isMilestone = (entry as any).post_type === "milestone";
 
   // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
   const displayImageUrl = entry.thumbnail_url
@@ -416,12 +417,17 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
 
   return (
     <div
-      className="rounded-xl border border-white/80 bg-white/45 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden cursor-pointer active:scale-[0.99] transition-transform"
+      className={`rounded-xl border overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-lg shadow-black/[0.05] text-card-foreground backdrop-blur-[12px] ${
+        isMilestone
+          ? "border-[#e8c87a]/60 bg-[#fcdd9d]/45"
+          : "border-white/80 bg-white/45"
+      }`}
       onClick={() => onExpand(entry)}
     >
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-6 pt-5 pb-1">
-        <span className="text-[11px] font-medium text-stone-400">
+        <span className="text-[11px] font-medium text-stone-400 flex items-center gap-1">
+          {isMilestone && <Star className="h-3 w-3 fill-[#e8a030] text-[#e8a030]" />}
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>
         <div className="flex items-center gap-1.5">

@@ -143,13 +143,14 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
       {/* Entry type */}
       <div className="px-4 pb-3 flex items-center gap-2">
         <span className="text-sm text-muted-foreground">Entry type</span>
-        <Select value={postType} onValueChange={(v: "standard" | "dialogue") => setPostType(v)}>
+        <Select value={postType} onValueChange={(v: "standard" | "dialogue" | "milestone") => setPostType(v)}>
           <SelectTrigger className="w-auto h-8 text-sm">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="dialogue">Dialogue / Quote</SelectItem>
+            <SelectItem value="milestone">Milestone</SelectItem>
           </SelectContent>
         </Select>
       </div>

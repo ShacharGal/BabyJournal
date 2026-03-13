@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
 import { parseDialogueText } from "@/lib/dialogueParser";
 import { parseMentions } from "@/lib/mentionParser";
@@ -62,6 +62,7 @@ export function MemoryDetailView({
   const canPlayVideo = isVideo && !!entry.drive_file_id;
   const hasAudio = !!audioUrl;
   const isDialogue = (entry as any).post_type === "dialogue";
+  const isMilestone = (entry as any).post_type === "milestone";
   // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
   const heroImageUrl = entry.thumbnail_url
     || (isPhoto && entry.drive_file_id ? driveStreamUrl(entry.drive_file_id) : null);
@@ -199,10 +200,15 @@ export function MemoryDetailView({
           slideDirection === "prev" ? "-translate-x-full opacity-0" : ""
         }`}
       >
-        <div className="mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl bg-white border border-stone-200 shadow-lg shadow-black/[0.05]">
+        <div className={`mx-3 mt-3 mb-3 p-5 space-y-4 rounded-xl shadow-lg shadow-black/[0.05] ${
+          isMilestone
+            ? "bg-[#fcdd9d]/30 border border-[#e8c87a]/60"
+            : "bg-white border border-stone-200"
+        }`}>
           {/* Header metadata (LTR) */}
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-stone-400">
+            <span className="text-xs font-medium text-stone-400 flex items-center gap-1">
+              {isMilestone && <Star className="h-3.5 w-3.5 fill-[#e8a030] text-[#e8a030]" />}
               {format(new Date(entry.date), "MMM d, yyyy")}
             </span>
             <div className="flex items-center gap-1.5">

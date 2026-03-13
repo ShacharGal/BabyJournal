@@ -107,6 +107,7 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
             <SelectItem value="_all">All styles</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="dialogue">Dialogue / Quote</SelectItem>
+            <SelectItem value="milestone">Milestone</SelectItem>
           </SelectContent>
         </Select>
       </div>

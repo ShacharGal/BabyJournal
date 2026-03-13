@@ -38,7 +38,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   const [selectedBabyId, setSelectedBabyId] = useState<string>("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [postType, setPostType] = useState<"standard" | "dialogue">("standard");
+  const [postType, setPostType] = useState<"standard" | "dialogue" | "milestone">("standard");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [secondaryFiles, setSecondaryFiles] = useState<File[]>([]);
