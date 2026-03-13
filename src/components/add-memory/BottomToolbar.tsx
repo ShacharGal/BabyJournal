@@ -19,20 +19,6 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
 
   return (
     <div className="border-t px-3 py-2 flex items-center gap-2">
-      {/* Publish / Update button */}
-      <Button
-        type="submit"
-        size="sm"
-        disabled={isUploading || !babies?.length || recorder.isRecording}
-        className="gap-1.5 bg-primary text-primary-foreground"
-      >
-        <Send className="h-4 w-4" />
-        {isEditing ? "Update" : "Publish"}
-      </Button>
-
-      {/* Spacer */}
-      <div className="flex-1" />
-
       {/* Voice menu */}
       <VoiceMenu
         onRecord={() => recorder.start()}
@@ -54,6 +40,20 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
 
       {/* Tags */}
       <TagCombobox selectedTagIds={selectedTags} onToggleTag={toggleTag} iconOnly />
+
+      {/* Spacer */}
+      <div className="flex-1" />
+
+      {/* Publish / Update button */}
+      <Button
+        type="submit"
+        size="sm"
+        disabled={isUploading || !babies?.length || recorder.isRecording}
+        className="gap-1.5 bg-primary text-primary-foreground"
+      >
+        <Send className="h-4 w-4" />
+        {isEditing ? "Update" : "Publish"}
+      </Button>
 
       {/* Hidden file inputs */}
       <input
