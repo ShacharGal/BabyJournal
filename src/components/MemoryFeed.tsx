@@ -370,26 +370,28 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 /*  MemoryCard — Text-First Feed Card                              */
 /* ──────────────────────────────────────────────────────────────── */
 
+const TEXT_MAX_HEIGHT = 132; // ~6 lines of text-sm (6 × 20px line-height + padding)
+
 function TruncatedText({ isDialogue, description, nicknames }: { isDialogue: boolean; description: string; nicknames: string[] }) {
   const textRef = useRef<HTMLDivElement>(null);
   const [isTruncated, setIsTruncated] = useState(false);
 
   useEffect(() => {
     const el = textRef.current;
-    if (el) setIsTruncated(el.scrollHeight > el.clientHeight);
+    if (el) setIsTruncated(el.scrollHeight > TEXT_MAX_HEIGHT);
   }, [description]);
 
   return (
-    <>
+    <div className="relative">
       <div
         ref={textRef}
         dir="auto"
-        className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-6 [-webkit-line-clamp:6] ${
+        className={`text-sm text-[#353326] whitespace-pre-wrap overflow-hidden ${
           isDialogue
             ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
             : ""
         }`}
-        style={{ WebkitBoxOrient: "vertical", display: "-webkit-box", overflow: "hidden", textOverflow: "clip" }}
+        style={{ maxHeight: TEXT_MAX_HEIGHT }}
       >
         {isDialogue
           ? parseDialogueText(description, nicknames)
@@ -397,9 +399,14 @@ function TruncatedText({ isDialogue, description, nicknames }: { isDialogue: boo
         }
       </div>
       {isTruncated && (
-        <div className="text-xs text-stone-400 mt-1 text-center">...</div>
+        <div
+          className="absolute bottom-0 left-0 right-0 h-8 flex items-end justify-end pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.85))" }}
+        >
+          <span className="text-[11px] text-stone-400/80 pr-1 pb-0.5">read more</span>
+        </div>
       )}
-    </>
+    </div>
   );
 }
 
