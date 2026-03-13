@@ -52,7 +52,8 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
     const keys = subscription.toJSON().keys!;
 
     // Save to backend
-    const { error } = await supabase.functions.invoke("push-subscribe", {
+    console.log("[Push] Saving subscription to backend...");
+    const { data, error } = await supabase.functions.invoke("push-subscribe", {
       body: {
         action: "subscribe",
         userId,
@@ -62,12 +63,19 @@ export async function subscribeToPush(userId: string): Promise<boolean> {
       },
     });
 
+    console.log("[Push] Backend response:", { data, error });
+
     if (error) {
       console.error("[Push] Failed to save subscription:", error);
       return false;
     }
 
-    console.log("[Push] Subscription saved");
+    if (data?.error) {
+      console.error("[Push] Backend error:", data.error);
+      return false;
+    }
+
+    console.log("[Push] Subscription saved successfully");
     return true;
   } catch (err) {
     console.error("[Push] Subscribe error:", err);

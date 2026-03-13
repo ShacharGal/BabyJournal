@@ -34,6 +34,7 @@ async function createVapidJwt(
   audience: string,
   subject: string,
   privateKeyBase64url: string,
+  publicKeyBase64url: string,
 ): Promise<string> {
   const header = { typ: "JWT", alg: "ES256" };
   const now = Math.floor(Date.now() / 1000);
@@ -44,17 +45,29 @@ async function createVapidJwt(
   const payloadB64 = uint8ArrayToBase64url(enc.encode(JSON.stringify(payload)));
   const unsigned = `${headerB64}.${payloadB64}`;
 
-  // Import VAPID private key as ECDSA P-256
-  const rawKey = base64urlToUint8Array(privateKeyBase64url);
+  // Import VAPID private key via JWK (web-push generates raw 32-byte keys)
+  const pubBytes = base64urlToUint8Array(publicKeyBase64url);
+  // Uncompressed EC point: 0x04 + 32 bytes X + 32 bytes Y
+  const x = uint8ArrayToBase64url(pubBytes.slice(1, 33));
+  const y = uint8ArrayToBase64url(pubBytes.slice(33, 65));
+
+  const jwk = {
+    kty: "EC",
+    crv: "P-256",
+    d: privateKeyBase64url,
+    x,
+    y,
+  };
+
   const key = await crypto.subtle.importKey(
-    "pkcs8",
-    rawKey,
+    "jwk",
+    jwk,
     { name: "ECDSA", namedCurve: "P-256" },
     false,
     ["sign"],
   );
 
-  const sig = new Uint8Array(
+  const rawSig = new Uint8Array(
     await crypto.subtle.sign(
       { name: "ECDSA", hash: "SHA-256" },
       key,
@@ -62,7 +75,8 @@ async function createVapidJwt(
     ),
   );
 
-  return `${unsigned}.${uint8ArrayToBase64url(sig)}`;
+  // Web Crypto returns IEEE P1363 format (r||s, 64 bytes) — Web Push expects this
+  return `${unsigned}.${uint8ArrayToBase64url(rawSig)}`;
 }
 
 /* ── Web Push encryption (aes128gcm) ─────────────────────────── */
@@ -186,7 +200,7 @@ async function sendWebPush(
   const url = new URL(endpoint);
   const audience = `${url.protocol}//${url.host}`;
 
-  const jwt = await createVapidJwt(audience, vapidSubject, vapidPrivateKey);
+  const jwt = await createVapidJwt(audience, vapidSubject, vapidPrivateKey, vapidPublicKey);
   const { encrypted } = await encryptPayload(payloadJson, p256dh, auth);
 
   const resp = await fetch(endpoint, {
