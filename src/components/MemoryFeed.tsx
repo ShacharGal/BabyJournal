@@ -370,6 +370,39 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 /*  MemoryCard — Text-First Feed Card                              */
 /* ──────────────────────────────────────────────────────────────── */
 
+function TruncatedText({ isDialogue, description, nicknames }: { isDialogue: boolean; description: string; nicknames: string[] }) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) setIsTruncated(el.scrollHeight > el.clientHeight);
+  }, [description]);
+
+  return (
+    <>
+      <div
+        ref={textRef}
+        dir="auto"
+        className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-6 [-webkit-line-clamp:6] ${
+          isDialogue
+            ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
+            : ""
+        }`}
+        style={{ WebkitBoxOrient: "vertical", display: "-webkit-box", overflow: "hidden", textOverflow: "clip" }}
+      >
+        {isDialogue
+          ? parseDialogueText(description, nicknames)
+          : parseMentions(description, nicknames)
+        }
+      </div>
+      {isTruncated && (
+        <div className="text-xs text-stone-400 mt-1 text-center">...</div>
+      )}
+    </>
+  );
+}
+
 export interface MemoryCardProps {
   entry: EntryWithTags;
   babyName: string;
@@ -471,19 +504,11 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
           className={`${showSplit ? "flex-1 min-w-0" : "w-full"}`}
         >
           {entry.description ? (
-            <div
-              dir="auto"
-              className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-5 ${
-                isDialogue
-                  ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
-                  : ""
-              }`}
-            >
-              {isDialogue
-                ? parseDialogueText(entry.description, nicknames)
-                : parseMentions(entry.description, nicknames)
-              }
-            </div>
+            <TruncatedText
+              isDialogue={isDialogue}
+              description={entry.description}
+              nicknames={nicknames}
+            />
           ) : (
             <div className="text-sm text-[#57534e]">No description</div>
           )}
