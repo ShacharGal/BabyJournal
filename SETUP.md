@@ -1,6 +1,6 @@
 # Setting Up Your Own BabyJournal
 
-Welcome! This guide will walk you through setting up your very own BabyJournal app — a beautiful, private place to save your baby's memories (photos, videos, audio recordings, and text notes).
+Welcome! This guide will walk you through setting up your very own BabyJournal — a family journal for capturing the stories and moments from your kids' childhood. Write down memories, tag which kid they're about, and attach photos, videos, or voice recordings. Search and browse everything later by text, tags, date, or who added it.
 
 **You don't need any programming experience.** Just follow the steps below, one at a time. If you get stuck at any point, see the "Get Help from AI" section — you can paste a prompt into ChatGPT or Claude and it will guide you through whatever step you're on.
 
@@ -13,6 +13,20 @@ The whole setup takes about 30-45 minutes. You'll be creating free accounts on t
 | **Google Cloud** | Lets the app save files to your Google Drive | Free |
 
 When you're done, you'll have your own private app at a URL like `https://your-baby-journal.vercel.app` that only you and your family can use.
+
+---
+
+## TL;DR
+
+If you're comfortable with developer tools and just want the short version:
+
+1. **Deploy** — click the Vercel deploy button below (or fork the repo and deploy manually)
+2. **Supabase** — create a project, run `setup/database-setup.sql` in the SQL editor, deploy all 8 edge functions with `npx supabase functions deploy <name> --project-ref <ref>`
+3. **Google Cloud** — create a project, enable Drive API + Photos Library API, set up OAuth consent screen (testing mode), create OAuth web credentials with your Vercel URL as the redirect URI
+4. **Connect** — set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Vercel env vars; set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as Supabase secrets
+5. **Redeploy** Vercel, open the app, create your first user in the `app_users` table (permission = `full`), log in, connect Google Drive from settings
+
+Edge functions to deploy: `drive-auth`, `drive-upload`, `drive-delete`, `drive-folder`, `drive-stream` (with `--no-verify-jwt`), `photos-list`, `login`, `manage-users`
 
 ---
 
