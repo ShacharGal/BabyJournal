@@ -7,6 +7,7 @@ import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
+import ShareTarget from "./pages/ShareTarget";
 
 const queryClient = new QueryClient();
 
@@ -63,6 +64,14 @@ function AppRoutes() {
           <PublicRoute>
             <Login />
           </PublicRoute>
+        }
+      />
+      <Route
+        path="/share-target"
+        element={
+          <ProtectedRoute>
+            <ShareTarget />
+          </ProtectedRoute>
         }
       />
       {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

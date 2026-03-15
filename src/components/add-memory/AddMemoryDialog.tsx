@@ -35,6 +35,7 @@ interface AddMemoryDialogProps {
   onOpenChange: (open: boolean) => void;
   preSelectedBabyId?: string;
   editEntry?: EntryWithTags | null;
+  initialFiles?: File[];
 }
 
 function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> }) {
@@ -209,9 +210,9 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
   );
 }
 
-export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEntry }: AddMemoryDialogProps) {
+export function AddMemoryDialog({ open, onOpenChange, preSelectedBabyId, editEntry, initialFiles }: AddMemoryDialogProps) {
   const isMobile = useIsMobile();
-  const form = useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEntry });
+  const form = useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEntry, initialFiles });
 
   const viewportHeight = useVisualViewport();
 
