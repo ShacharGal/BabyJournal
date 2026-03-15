@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { AppNavBar } from "@/components/AppNavBar";
 import { MemoryFeed } from "@/components/MemoryFeed";
 import { AddMemoryDialog } from "@/components/add-memory/AddMemoryDialog";
@@ -15,7 +16,19 @@ const Index = () => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editEntry, setEditEntry] = useState<EntryWithTags | null>(null);
   const [showFavorites, setShowFavorites] = useState(false);
+  const [sharedFiles, setSharedFiles] = useState<File[]>([]);
   const { canAdd } = useAuthContext();
+  const location = useLocation();
+
+  useEffect(() => {
+    const state = location.state as { sharedFiles?: File[] } | null;
+    if (state?.sharedFiles && state.sharedFiles.length > 0) {
+      console.log("[ShareTarget] Opening dialog with", state.sharedFiles.length, "shared file(s)");
+      setSharedFiles(state.sharedFiles);
+      setAddDialogOpen(true);
+      window.history.replaceState({}, "", "/");
+    }
+  }, [location.state]);
 
   const handleEdit = (entry: EntryWithTags) => {
     setEditEntry(entry);
@@ -24,7 +37,10 @@ const Index = () => {
 
   const handleDialogClose = (open: boolean) => {
     setAddDialogOpen(open);
-    if (!open) setEditEntry(null);
+    if (!open) {
+      setEditEntry(null);
+      setSharedFiles([]);
+    }
   };
 
   return (
@@ -55,6 +71,7 @@ const Index = () => {
         onOpenChange={handleDialogClose}
         preSelectedBabyId={selectedBabyId}
         editEntry={editEntry}
+        initialFiles={sharedFiles}
       />
 
       {showFavorites && <FavoritesView onClose={() => setShowFavorites(false)} />}

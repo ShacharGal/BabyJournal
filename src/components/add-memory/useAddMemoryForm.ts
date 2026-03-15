@@ -29,9 +29,10 @@ interface UseAddMemoryFormProps {
   onOpenChange: (open: boolean) => void;
   preSelectedBabyId?: string;
   editEntry?: EntryWithTags | null;
+  initialFiles?: File[];
 }
 
-export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEntry }: UseAddMemoryFormProps) {
+export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEntry, initialFiles }: UseAddMemoryFormProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
 
@@ -90,8 +91,15 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
       } else {
         setSelectedBabyId("");
       }
+      if (initialFiles && initialFiles.length > 0) {
+        console.log("[ShareTarget] Applying", initialFiles.length, "initial file(s) to form");
+        const [primary, ...rest] = initialFiles;
+        setFile(primary);
+        if (rest.length > 0) setSecondaryFiles(rest.slice(0, 4));
+        extractDateFromFile(primary).then((d) => { if (d) setDate(d); });
+      }
     }
-  }, [open, editEntry, preSelectedBabyId, babies]);
+  }, [open, editEntry, preSelectedBabyId, babies, initialFiles]);
 
   const resetForm = () => {
     setDescription("");
