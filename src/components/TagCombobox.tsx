@@ -208,52 +208,41 @@ export function InlineTagPanel({
           {tags.map((tag) => {
             const selected = selectedTagIds.includes(tag.id);
             return (
-              <div key={tag.id} className="inline-flex items-center">
-                <button
-                  type="button"
-                  onClick={() => onToggleTag(tag.id)}
-                  className={cn(
-                    "inline-flex items-center gap-1.5 py-1.5 text-sm border transition-colors",
-                    canDelete ? "rounded-l-full pl-3 pr-1.5" : "rounded-full px-3",
-                    selected
-                      ? "border-transparent font-medium"
-                      : "border-border bg-background text-muted-foreground",
-                    canDelete && selected ? "border-r-0" : "",
-                    canDelete && !selected ? "border-r-0" : ""
-                  )}
-                  style={
-                    selected
-                      ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
-                      : undefined
-                  }
-                >
-                  <div
-                    className="h-2.5 w-2.5 rounded-full shrink-0"
-                    style={{ backgroundColor: tag.color || "#6366f1" }}
-                  />
-                  {tag.name}
-                  {selected && <Check className="h-3.5 w-3.5" />}
-                </button>
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(tag.id, tag.name)}
-                    className={cn(
-                      "inline-flex items-center py-1.5 pr-2 pl-0.5 text-sm border border-l-0 rounded-r-full transition-colors",
-                      selected
-                        ? "border-transparent"
-                        : "border-border bg-background"
-                    )}
-                    style={
-                      selected
-                        ? { backgroundColor: `${tag.color || "#6366f1"}25` }
-                        : undefined
-                    }
-                  >
-                    <X className="h-3 w-3 text-muted-foreground" />
-                  </button>
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => onToggleTag(tag.id)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors",
+                  selected
+                    ? "border-transparent font-medium"
+                    : "border-border bg-background text-muted-foreground"
                 )}
-              </div>
+                style={
+                  selected
+                    ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
+                    : undefined
+                }
+              >
+                <div
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: tag.color || "#6366f1" }}
+                />
+                {tag.name}
+                {selected && <Check className="h-3.5 w-3.5" />}
+                {canDelete && (
+                  <span
+                    role="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDelete(tag.id, tag.name);
+                    }}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-destructive/20 text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </span>
+                )}
+              </button>
             );
           })}
         </div>
