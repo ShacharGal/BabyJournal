@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           id: string
           nickname: string
+          notification_pref: string
           password: string
           permission: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           id?: string
           nickname: string
+          notification_pref?: string
           password: string
           permission?: string
         }
@@ -33,10 +35,46 @@ export type Database = {
           created_at?: string
           id?: string
           nickname?: string
+          notification_pref?: string
           password?: string
           permission?: string
         }
         Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          endpoint: string
+          p256dh: string
+          auth: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          endpoint?: string
+          p256dh?: string
+          auth?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       babies: {
         Row: {
@@ -67,6 +105,7 @@ export type Database = {
       }
       entries: {
         Row: {
+          app_version: number | null
           audio_file_name: string | null
           audio_file_size: number | null
           audio_storage_path: string | null
@@ -88,6 +127,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          app_version?: number | null
           audio_file_name?: string | null
           audio_file_size?: number | null
           audio_storage_path?: string | null
@@ -109,6 +149,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          app_version?: number | null
           audio_file_name?: string | null
           audio_file_size?: number | null
           audio_storage_path?: string | null
@@ -184,6 +225,35 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "entry_images_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      entry_favorites: {
+        Row: {
+          id: string
+          entry_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          entry_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          entry_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entry_favorites_entry_id_fkey"
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "entries"

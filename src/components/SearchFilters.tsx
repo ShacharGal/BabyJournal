@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useUsedTags } from "@/hooks/useTags";
 import { Search, X } from "lucide-react";
-import { useEntryContributors } from "@/hooks/useEntries";
+import { useEntryContributors, useAllNicknames } from "@/hooks/useEntries";
 
 export interface Filters {
   text: string;
@@ -20,6 +20,7 @@ export interface Filters {
   entryType: string;
   postType: string;
   contributorId: string;
+  mentionedNickname: string;
 }
 
 interface SearchFiltersProps {
@@ -30,6 +31,7 @@ interface SearchFiltersProps {
 export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
   const { data: tags } = useUsedTags();
   const { data: contributors } = useEntryContributors();
+  const { data: allNicknames = [] } = useAllNicknames();
 
   const update = (partial: Partial<Filters>) =>
     onChange({ ...filters, ...partial });
@@ -47,7 +49,8 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
     filters.dateTo ||
     filters.entryType ||
     filters.postType ||
-    filters.contributorId;
+    filters.contributorId ||
+    filters.mentionedNickname;
 
   const clearAll = () =>
     onChange({
@@ -58,6 +61,7 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
       entryType: "",
       postType: "",
       contributorId: "",
+      mentionedNickname: "",
     });
 
   return (
@@ -103,6 +107,7 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
             <SelectItem value="_all">All styles</SelectItem>
             <SelectItem value="standard">Standard</SelectItem>
             <SelectItem value="dialogue">Dialogue / Quote</SelectItem>
+            <SelectItem value="milestone">Milestone</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -121,6 +126,26 @@ export function SearchFilters({ filters, onChange }: SearchFiltersProps) {
             {contributors.map((c) => (
               <SelectItem key={c.id} value={c.id}>
                 {c.nickname}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
+
+      {/* Mentioned user filter */}
+      {allNicknames.length > 0 && (
+        <Select
+          value={filters.mentionedNickname || "_all"}
+          onValueChange={(v) => update({ mentionedNickname: v === "_all" ? "" : v })}
+        >
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Mentions" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="_all">All mentions</SelectItem>
+            {allNicknames.map((nick) => (
+              <SelectItem key={nick} value={nick}>
+                @{nick}
               </SelectItem>
             ))}
           </SelectContent>

@@ -1,17 +1,19 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useEntries, useDeleteEntry, type EntryWithTags } from "@/hooks/useEntries";
+import { useEntries, useDeleteEntry, useAllNicknames, type EntryWithTags } from "@/hooks/useEntries";
 import { useBabies } from "@/hooks/useBabies";
 import { toast } from "@/hooks/use-toast";
-import { format, differenceInMonths, differenceInYears, differenceInDays } from "date-fns";
+import { format } from "date-fns";
+import { formatAgeAtDate } from "@/lib/ageFormatter";
 import {
-  Loader2, Heart, Calendar, Maximize2, Volume2, ChevronLeft, ChevronRight, User,
+  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User, Star,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
 import { MemoryDetailView } from "@/components/MemoryDetailView";
 import { parseDialogueText } from "@/lib/dialogueParser";
+import { parseMentions } from "@/lib/mentionParser";
 import { driveStreamUrl } from "@/lib/driveStreamUrl";
 import { useFavoriteIds, useToggleFavorite } from "@/hooks/useFavorites";
 
@@ -33,23 +35,6 @@ function getTagColor(tagName: string): string {
   return EARTH_TONE_COLORS[Math.abs(hash) % EARTH_TONE_COLORS.length];
 }
 
-function formatAgeAtDate(dateOfBirth: string, memoryDate: string): string {
-  const dob = new Date(dateOfBirth);
-  const d = new Date(memoryDate);
-  const months = differenceInMonths(d, dob);
-  if (months < 1) {
-    const days = differenceInDays(d, dob);
-    return `${days} day${days !== 1 ? "s" : ""} old`;
-  }
-  if (months < 24) {
-    return `${months} month${months !== 1 ? "s" : ""} old`;
-  }
-  const years = differenceInYears(d, dob);
-  const rem = months - years * 12;
-  return rem > 0
-    ? `${years}y ${rem}m old`
-    : `${years} year${years !== 1 ? "s" : ""} old`;
-}
 
 interface MemoryFeedProps {
   babyId?: string;
@@ -66,6 +51,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const { canEdit, canAdd, user } = useAuthContext();
   const { data: favoriteIds = new Set<string>() } = useFavoriteIds(user?.id);
   const toggleFavorite = useToggleFavorite();
+  const { data: allNicknames = [] } = useAllNicknames();
   const [detailEntry, setDetailEntry] = useState<EntryWithTags | null>(null);
   const [currentMonth, setCurrentMonth] = useState<string>("");
   const [monthPickerOpen, setMonthPickerOpen] = useState(false);
@@ -106,8 +92,12 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     if (filters.dateFrom && entry.date < filters.dateFrom) return false;
     if (filters.dateTo && entry.date > filters.dateTo) return false;
     if (filters.entryType && entry.type !== filters.entryType) return false;
-    if (filters.postType && (entry as any).post_type !== filters.postType) return false;
+    if (filters.postType && entry.post_type !== filters.postType) return false;
     if (filters.contributorId && entry.created_by !== filters.contributorId) return false;
+    if (filters.mentionedNickname) {
+      const pattern = new RegExp(`@${filters.mentionedNickname.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?!\\p{L})`, "iu");
+      if (!entry.description || !pattern.test(entry.description)) return false;
+    }
     return true;
   });
 
@@ -332,6 +322,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
                     if (!user?.id) return;
                     toggleFavorite.mutate({ entryId, userId: user.id, isFavorited: favoriteIds.has(entryId) });
                   }}
+                  nicknames={allNicknames}
                 />
               </div>
             ))}
@@ -366,6 +357,9 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
             if (!user?.id) return;
             toggleFavorite.mutate({ entryId: detailEntry.id, userId: user.id, isFavorited: favoriteIds.has(detailEntry.id) });
           }}
+          allEntries={filteredEntries}
+          onNavigate={setDetailEntry}
+          nicknames={allNicknames}
         />
       )}
     </>
@@ -376,6 +370,37 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
 /*  MemoryCard — Text-First Feed Card                              */
 /* ──────────────────────────────────────────────────────────────── */
 
+function TruncatedText({ isDialogue, description, nicknames }: { isDialogue: boolean; description: string; nicknames: string[] }) {
+  const textRef = useRef<HTMLDivElement>(null);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useEffect(() => {
+    const el = textRef.current;
+    if (el) setIsTruncated(el.scrollHeight > el.clientHeight + 1);
+  }, [description]);
+
+  return (
+    <div
+      ref={textRef}
+      dir="auto"
+      className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-6 ${
+        isDialogue
+          ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
+          : ""
+      }`}
+      style={isTruncated ? {
+        maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+      } : undefined}
+    >
+      {isDialogue
+        ? parseDialogueText(description, nicknames)
+        : parseMentions(description, nicknames)
+      }
+    </div>
+  );
+}
+
 export interface MemoryCardProps {
   entry: EntryWithTags;
   babyName: string;
@@ -384,15 +409,17 @@ export interface MemoryCardProps {
   onExpand: (entry: EntryWithTags) => void;
   isFavorited?: boolean;
   onToggleFavorite?: (entryId: string) => void;
+  nicknames?: string[];
 }
 
-export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite }: MemoryCardProps) {
-  const audioUrl = (entry as any).audio_url as string | null;
+export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFavorited = false, onToggleFavorite, nicknames = [] }: MemoryCardProps) {
+  const audioUrl = entry.audio_url;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
   const isVideo = entry.type === "video";
   const hasAudio = !!audioUrl;
-  const isDialogue = (entry as any).post_type === "dialogue";
+  const isDialogue = entry.post_type === "dialogue";
+  const isMilestone = entry.post_type === "milestone";
 
   // Fallback: if no thumbnail but has drive_file_id and is a photo, use drive-stream
   const displayImageUrl = entry.thumbnail_url
@@ -404,10 +431,18 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
   const showSplit = hasMedia || hasAudioOnly;
 
   return (
-    <div className="rounded-xl border border-white/80 bg-white/45 backdrop-blur-[12px] text-card-foreground shadow-lg shadow-black/[0.05] overflow-hidden">
+    <div
+      className={`rounded-xl border overflow-hidden cursor-pointer active:scale-[0.99] transition-transform shadow-lg shadow-black/[0.05] text-card-foreground backdrop-blur-[12px] ${
+        isMilestone
+          ? "border-[#e8c87a]/60 bg-[#fcdd9d]/45"
+          : "border-white/80 bg-white/45"
+      }`}
+      onClick={() => onExpand(entry)}
+    >
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-6 pt-5 pb-1">
-        <span className="text-[11px] font-medium text-stone-400">
+        <span className="text-[11px] font-medium text-stone-400 flex items-center gap-1">
+          {isMilestone && <Star className="h-3 w-3 fill-[#e8a030] text-[#e8a030]" />}
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>
         <div className="flex items-center gap-1.5">
@@ -467,19 +502,11 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
           className={`${showSplit ? "flex-1 min-w-0" : "w-full"}`}
         >
           {entry.description ? (
-            <div
-              dir="auto"
-              className={`text-sm text-[#353326] whitespace-pre-wrap line-clamp-5 ${
-                isDialogue
-                  ? "border-r-2 border-amber-300/60 pr-2 rounded-l-md py-1"
-                  : ""
-              }`}
-            >
-              {isDialogue
-                ? parseDialogueText(entry.description)
-                : entry.description
-              }
-            </div>
+            <TruncatedText
+              isDialogue={isDialogue}
+              description={entry.description}
+              nicknames={nicknames}
+            />
           ) : (
             <div className="text-sm text-[#57534e]">No description</div>
           )}
@@ -490,13 +517,6 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
       <div className="flex items-center justify-between px-6 pb-5 pt-1 gap-2">
         {/* Left side (LTR): Expand icon + heart + contributor */}
         <div className="flex items-center gap-2 text-stone-400 shrink-0">
-          <button
-            onClick={() => onExpand(entry)}
-            className="p-1 hover:text-stone-600 transition-colors"
-            title="Expand"
-          >
-            <Maximize2 className="h-3.5 w-3.5" />
-          </button>
           {onToggleFavorite && (
             <button
               onClick={(e) => { e.stopPropagation(); onToggleFavorite(entry.id); }}

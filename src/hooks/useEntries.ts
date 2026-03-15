@@ -49,7 +49,7 @@ export function useEntries(babyId?: string) {
       const { data, error } = await query;
       if (error) throw error;
 
-      const rows = data as any[];
+      const rows = data ?? [];
       const creatorIds = Array.from(
         new Set(rows.map((row) => row.created_by).filter(Boolean))
       ) as string[];
@@ -62,7 +62,7 @@ export function useEntries(babyId?: string) {
           .in("id", creatorIds);
 
         if (creatorsError) throw creatorsError;
-        (creators ?? []).forEach((creator: any) => {
+        ((creators ?? []) as { id: string; nickname: string }[]).forEach((creator) => {
           nicknameByUserId.set(creator.id, creator.nickname);
         });
       }
@@ -199,9 +199,9 @@ export function useDeleteEntry() {
         console.warn("Failed to delete thumbnail:", e);
       }
 
-      if ((entry as any)?.audio_storage_path) {
+      if (entry?.audio_storage_path) {
         try {
-          await deleteAudio((entry as any).audio_storage_path);
+          await deleteAudio(entry.audio_storage_path);
         } catch (e) {
           console.warn("Failed to delete audio:", e);
         }
@@ -217,6 +217,25 @@ export function useDeleteEntry() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["entries"] });
     },
+  });
+}
+
+export function useAllNicknames() {
+  return useQuery({
+    queryKey: ["all-nicknames"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("app_users_public" as any)
+        .select("nickname");
+      if (error) {
+        console.error("[Mentions] Failed to fetch nicknames:", error);
+        throw error;
+      }
+      const nicknames = ((data ?? []) as { nickname: string }[]).map((u) => u.nickname);
+      console.log("[Mentions] Loaded nicknames:", nicknames);
+      return nicknames;
+    },
+    staleTime: 5 * 60 * 1000,
   });
 }
 
@@ -241,7 +260,7 @@ export function useEntryContributors() {
         .in("id", uniqueIds);
       if (usersError) throw usersError;
 
-      return (users ?? []) as { id: string; nickname: string }[];
+      return ((users ?? []) as { id: string; nickname: string }[]);
     },
   });
 }

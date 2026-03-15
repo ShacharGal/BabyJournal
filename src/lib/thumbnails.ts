@@ -56,42 +56,6 @@ export async function deleteThumbnail(entryId: string): Promise<void> {
 }
 
 /**
- * Upload a base64-encoded thumbnail (e.g. from Google Drive) to the thumbnails bucket.
- */
-export async function uploadBase64Thumbnail(
-  base64Data: string,
-  entryId: string
-): Promise<string | null> {
-  try {
-    const binaryString = atob(base64Data);
-    const bytes = new Uint8Array(binaryString.length);
-    for (let i = 0; i < binaryString.length; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    const blob = new Blob([bytes], { type: "image/jpeg" });
-    const path = `${entryId}.jpg`;
-
-    const { error } = await supabase.storage
-      .from("thumbnails")
-      .upload(path, blob, { contentType: "image/jpeg", upsert: true });
-
-    if (error) {
-      console.warn("Thumbnail upload failed:", error);
-      return null;
-    }
-
-    const { data: urlData } = supabase.storage
-      .from("thumbnails")
-      .getPublicUrl(path);
-
-    return urlData.publicUrl;
-  } catch (e) {
-    console.warn("Base64 thumbnail upload failed:", e);
-    return null;
-  }
-}
-
-/**
  * Generate a thumbnail from a video file by capturing a frame at ~1 second.
  * Used as fallback when Google Drive thumbnail is not available.
  */
@@ -140,6 +104,11 @@ function captureVideoFrame(file: File): Promise<Blob> {
     };
 
     video.onseeked = () => {
+      if (!video.videoWidth || !video.videoHeight) {
+        URL.revokeObjectURL(url);
+        reject(new Error("Video has zero dimensions"));
+        return;
+      }
       const canvas = document.createElement("canvas");
       canvas.width = Math.min(video.videoWidth, MAX_THUMB_WIDTH);
       const scale = canvas.width / video.videoWidth;
@@ -175,6 +144,10 @@ function resizeImage(file: File, maxWidth: number, quality: number): Promise<Blo
 
     img.onload = () => {
       URL.revokeObjectURL(url);
+      if (!img.width || !img.height) {
+        reject(new Error("Image has zero dimensions"));
+        return;
+      }
       const scale = Math.min(1, maxWidth / img.width);
       const w = Math.round(img.width * scale);
       const h = Math.round(img.height * scale);

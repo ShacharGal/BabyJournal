@@ -23,7 +23,33 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, callerId } = body;
 
-    // Verify caller has full permission
+    // Self-service actions (any user can do these for themselves)
+    if (action === "get-my-pref") {
+      if (!callerId) return json({ error: "callerId required" }, 400);
+      const { data, error } = await supabase
+        .from("app_users")
+        .select("notification_pref")
+        .eq("id", callerId)
+        .single();
+      if (error) throw error;
+      return json({ notification_pref: data?.notification_pref || "all" });
+    }
+
+    if (action === "update-my-pref") {
+      const { notification_pref } = body;
+      if (!callerId) return json({ error: "callerId required" }, 400);
+      if (!["all", "mentioned", "none"].includes(notification_pref)) {
+        return json({ error: "Invalid notification_pref" }, 400);
+      }
+      const { error } = await supabase
+        .from("app_users")
+        .update({ notification_pref })
+        .eq("id", callerId);
+      if (error) throw error;
+      return json({ success: true, notification_pref });
+    }
+
+    // Verify caller has full permission for admin actions
     const { data: caller } = await supabase
       .from("app_users")
       .select("permission")
@@ -37,36 +63,37 @@ Deno.serve(async (req) => {
     if (action === "list") {
       const { data, error } = await supabase
         .from("app_users")
-        .select("id, nickname, permission, created_at")
+        .select("id, nickname, permission, notification_pref, created_at")
         .order("created_at", { ascending: true });
       if (error) throw error;
       return json({ users: data });
     }
 
     if (action === "create") {
-      const { nickname, password, permission } = body;
+      const { nickname, password, permission, notification_pref } = body;
       if (!nickname || !password) return json({ error: "Nickname and password required" }, 400);
       const { data, error } = await supabase
         .from("app_users")
-        .insert({ nickname, password, permission: permission || "view_only" })
-        .select("id, nickname, permission, created_at")
+        .insert({ nickname, password, permission: permission || "view_only", notification_pref: notification_pref || "all" })
+        .select("id, nickname, permission, notification_pref, created_at")
         .single();
       if (error) throw error;
       return json({ user: data });
     }
 
     if (action === "update") {
-      const { userId, nickname, password, permission } = body;
+      const { userId, nickname, password, permission, notification_pref } = body;
       if (!userId) return json({ error: "userId required" }, 400);
       const updates: Record<string, string> = {};
       if (nickname) updates.nickname = nickname;
       if (password) updates.password = password;
       if (permission) updates.permission = permission;
+      if (notification_pref) updates.notification_pref = notification_pref;
       const { data, error } = await supabase
         .from("app_users")
         .update(updates)
         .eq("id", userId)
-        .select("id, nickname, permission, created_at")
+        .select("id, nickname, permission, notification_pref, created_at")
         .single();
       if (error) throw error;
       return json({ user: data });

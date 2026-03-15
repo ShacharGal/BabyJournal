@@ -30,13 +30,15 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Loader2, Users, Eye, PenLine, Shield } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Users, Eye, PenLine, Shield, Bell, BellOff, AtSign } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { isPushSupported, subscribeToPush, unsubscribeFromPush, getCurrentPushSubscription } from "@/lib/pushNotifications";
 
 interface ManagedUser {
   id: string;
   nickname: string;
   permission: string;
+  notification_pref: string;
   created_at: string;
 }
 
@@ -55,6 +57,13 @@ export function UserManagement() {
   const [nickname, setNickname] = useState("");
   const [password, setPassword] = useState("");
   const [permission, setPermission] = useState("view_only");
+  const [notificationPref, setNotificationPref] = useState("all");
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+
+  // Check current push subscription status
+  useEffect(() => {
+    getCurrentPushSubscription().then((sub) => setPushSubscribed(!!sub));
+  }, []);
 
   const callApi = useCallback(
     async (body: Record<string, unknown>) => {
@@ -89,6 +98,7 @@ export function UserManagement() {
     setNickname("");
     setPassword("");
     setPermission("view_only");
+    setNotificationPref("all");
     setDialogOpen(true);
   };
 
@@ -97,6 +107,7 @@ export function UserManagement() {
     setNickname(u.nickname);
     setPassword("");
     setPermission(u.permission);
+    setNotificationPref(u.notification_pref || "all");
     setDialogOpen(true);
   };
 
@@ -118,6 +129,7 @@ export function UserManagement() {
           nickname: nickname.trim(),
           ...(password.trim() ? { password: password.trim() } : {}),
           permission,
+          notification_pref: notificationPref,
         });
         toast({ title: "User updated" });
       } else {
@@ -126,6 +138,7 @@ export function UserManagement() {
           nickname: nickname.trim(),
           password: password.trim(),
           permission,
+          notification_pref: notificationPref,
         });
         toast({ title: "User created" });
       }
@@ -196,6 +209,11 @@ export function UserManagement() {
                   {permissionIcon(u.permission)}
                   {u.permission === "view_only" ? "View only" : u.permission === "add" ? "Can add" : "Full"}
                 </Badge>
+                <span className="text-muted-foreground" title={`Notifications: ${u.notification_pref || "all"}`}>
+                  {u.notification_pref === "none" ? <BellOff className="h-3 w-3" /> :
+                   u.notification_pref === "mentioned" ? <AtSign className="h-3 w-3" /> :
+                   <Bell className="h-3 w-3" />}
+                </span>
                 {u.id === user?.id && (
                   <span className="text-xs text-muted-foreground">(you)</span>
                 )}
@@ -256,6 +274,41 @@ export function UserManagement() {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-2">
+              <Label>Notifications</Label>
+              <Select value={notificationPref} onValueChange={setNotificationPref}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All new memories</SelectItem>
+                  <SelectItem value="mentioned">Only when @mentioned</SelectItem>
+                  <SelectItem value="none">None</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {editingUser?.id === user?.id && isPushSupported() && notificationPref !== "none" && (
+              <div className="space-y-2">
+                <Label>Push on this device</Label>
+                <Button
+                  variant={pushSubscribed ? "outline" : "default"}
+                  size="sm"
+                  className="w-full"
+                  onClick={async () => {
+                    if (pushSubscribed) {
+                      const ok = await unsubscribeFromPush(user!.id);
+                      if (ok) { setPushSubscribed(false); toast({ title: "Push disabled on this device" }); }
+                    } else {
+                      const ok = await subscribeToPush(user!.id);
+                      if (ok) { setPushSubscribed(true); toast({ title: "Push enabled!" }); }
+                      else toast({ title: "Could not enable push", description: "Check browser permissions", variant: "destructive" });
+                    }
+                  }}
+                >
+                  {pushSubscribed ? <><BellOff className="h-4 w-4 mr-2" />Disable push</> : <><Bell className="h-4 w-4 mr-2" />Enable push notifications</>}
+                </Button>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
