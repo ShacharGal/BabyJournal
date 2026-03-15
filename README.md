@@ -25,42 +25,38 @@ That's it. You'll have a private app at `https://your-baby-journal.vercel.app` t
 
 ## Features
 
-**Writing & media**
-- Text-first entries — write the story, optionally attach media
-- Photo upload with automatic date extraction from EXIF metadata
-- Video upload with resumable uploads for large files and streaming playback
-- Record audio directly in the app (first words, funny sounds, lullabies) or upload a file
-- Up to 4 additional photos per memory
-- Dialogue/quote mode — format conversations and funny things your kid said
+**Write it down, enrich it later**
+- Text-first — jot down what happened, add photos or video when you have time
+- Three entry styles: standard memories, dialogue/quotes (for the hilarious things kids say), and milestones (for the big firsts, shown with a star)
+- Attach photos, videos, or voice recordings — record audio right in the app to capture first words and funny sounds
+- Add up to 4 extra photos per memory
 
-**Organization**
-- Tag memories with built-in or custom tags (milestone, first time, funny, family, outdoors…)
-- Track multiple children — each gets their own Drive folder and age calculation
-- Timeline view grouped by month, with a calendar picker to jump to any month
-- Heart your favorites — each family member gets their own favorites list
+**Share straight from your phone**
+- Install as an app (PWA) on your phone's home screen
+- Share photos and videos directly from your gallery or camera into BabyJournal — no need to open the app first
 
-**Search**
-- Full-text search across descriptions, tags, and contributors
-- Filter by media type, date range, tags, entry style, or who added it
-- Combine multiple filters and clear them all at once
+**Stay in the loop**
+- Push notifications when a family member adds a new memory
+- Choose what you get notified about: everything, only when you're @mentioned, or nothing
+- Per-device control — enable notifications on your phone but not your laptop
 
-**Family sharing**
+**Find anything**
+- Full-text search across descriptions, tags, and who added it
+- Filter by date range, media type, tags, entry style, or contributor
+- Browse by month with a calendar picker — months with memories are highlighted
+- Each memory shows your child's age at the time, calculated automatically
+
+**Organize your way**
+- Tag memories (milestone, first time, funny, family, outdoors — or create your own)
+- Track multiple children in one journal, each with their own folder and age tracking
+- Heart your favorites — every family member gets their own favorites list
+
+**Built for families**
 - Three permission levels: full access, can add, view-only
-- Invite family members with a simple nickname + password — they log in from any browser
-- Every memory shows who added it
+- Add family members with a simple nickname + password — they log in from any browser
+- Every memory shows who contributed it
 
-**Storage & privacy**
-- Photos and videos stored in your own Google Drive
-- Audio stored in Supabase storage
-- Thumbnails auto-generated and cached
-- All data stays in your own accounts — nothing shared with third parties
-- Works on any device with a browser — mobile-friendly design
-
-## Development
-
-```bash
-npm install          # Install dependencies
-npm run dev          # Local dev server
-npm run build        # Production build
-npm run lint         # ESLint
-```
+**Your data, your accounts**
+- Photos and videos live in your own Google Drive (15 GB free)
+- Everything else runs on Supabase's free tier
+- Nothing is shared with third parties — you own all of it
