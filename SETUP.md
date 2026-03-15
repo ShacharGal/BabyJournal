@@ -432,6 +432,33 @@ The very first user needs to be created directly in the database:
 
 You're all set! Try adding your first memory using the **+** button.
 
+### Step 5.6 — Install on Your Phone (Recommended)
+
+BabyJournal works as a **Progressive Web App (PWA)** — you can install it on your phone's home screen so it looks and feels like a native app. Installing it also unlocks two features that only work when the app is installed:
+
+- **Push notifications** — get notified when a family member adds a new memory
+- **Share target** — share photos and videos directly from your phone's gallery or camera into BabyJournal, just like sharing to WhatsApp or Instagram
+
+**To install on iPhone (Safari):**
+1. Open your app URL in Safari (e.g., `https://baby-journal-abc123.vercel.app`)
+2. Tap the **Share** button (the square with an arrow pointing up)
+3. Scroll down and tap **Add to Home Screen**
+4. Tap **Add**
+
+**To install on Android (Chrome):**
+1. Open your app URL in Chrome
+2. Tap the **three dots menu** (top right)
+3. Tap **Add to Home screen** (or **Install app**)
+4. Tap **Install**
+
+Once installed, open the app from your home screen. To enable notifications:
+1. Go to the menu/settings area
+2. Find **Notifications**
+3. Choose your preference: get notified about all new memories, only when you're @mentioned, or none
+4. Toggle on push notifications for this device — your browser will ask for permission, tap **Allow**
+
+Tell your family members to install it too so they get notifications and can share photos directly into the journal.
+
 ---
 
 ## Troubleshooting
