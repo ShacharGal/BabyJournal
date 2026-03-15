@@ -3,8 +3,8 @@ import App from "./App.tsx";
 import "./index.css";
 import { registerServiceWorker } from "@/lib/pushNotifications";
 
-export const APP_VERSION = 77;
-console.log("[BabyJournal] Build v77");
+export const APP_VERSION = 78;
+console.log("[BabyJournal] Build v78");
 
 // Register service worker for push notifications
 registerServiceWorker();

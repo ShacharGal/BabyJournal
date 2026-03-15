@@ -14,21 +14,23 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { useTags, useCreateTag } from "@/hooks/useTags";
-import { Check, Plus, Tags } from "lucide-react";
+import { useTags, useCreateTag, useDeleteTag } from "@/hooks/useTags";
+import { Check, Plus, Tags, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TagComboboxProps {
   selectedTagIds: string[];
   onToggleTag: (tagId: string) => void;
   iconOnly?: boolean;
+  canDelete?: boolean;
 }
 
-export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagComboboxProps) {
+export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly, canDelete }: TagComboboxProps) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const { data: tags } = useTags();
   const createTag = useCreateTag();
+  const deleteTag = useDeleteTag();
 
   const handleCreateTag = async () => {
     if (!inputValue.trim()) return;
@@ -38,6 +40,15 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
       setInputValue("");
     } catch {
       // tag might already exist
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string, tagName: string) => {
+    if (!confirm(`Delete tag "${tagName}"? It will be removed from all entries.`)) return;
+    try {
+      await deleteTag.mutateAsync(tagId);
+    } catch {
+      // ignore
     }
   };
 
@@ -96,6 +107,18 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
                         selectedTagIds.includes(tag.id) ? "opacity-100" : "opacity-0"
                       )}
                     />
+                    {canDelete && (
+                      <button
+                        type="button"
+                        className="ml-1 p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteTag(tag.id, tag.name);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -143,12 +166,15 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
 export function InlineTagPanel({
   selectedTagIds,
   onToggleTag,
+  canDelete,
 }: {
   selectedTagIds: string[];
   onToggleTag: (tagId: string) => void;
+  canDelete?: boolean;
 }) {
   const { data: tags } = useTags();
   const createTag = useCreateTag();
+  const deleteTag = useDeleteTag();
   const [newTagName, setNewTagName] = useState("");
 
   const handleCreate = async () => {
@@ -165,6 +191,15 @@ export function InlineTagPanel({
     }
   };
 
+  const handleDelete = async (tagId: string, tagName: string) => {
+    if (!confirm(`Delete tag "${tagName}"? It will be removed from all entries.`)) return;
+    try {
+      await deleteTag.mutateAsync(tagId);
+    } catch {
+      // ignore
+    }
+  };
+
   return (
     <div className="border-t px-3 py-2 max-h-[180px] overflow-y-auto">
       {/* Existing tags */}
@@ -173,29 +208,52 @@ export function InlineTagPanel({
           {tags.map((tag) => {
             const selected = selectedTagIds.includes(tag.id);
             return (
-              <button
-                key={tag.id}
-                type="button"
-                onClick={() => onToggleTag(tag.id)}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors",
-                  selected
-                    ? "border-transparent font-medium"
-                    : "border-border bg-background text-muted-foreground"
+              <div key={tag.id} className="inline-flex items-center">
+                <button
+                  type="button"
+                  onClick={() => onToggleTag(tag.id)}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 py-1.5 text-sm border transition-colors",
+                    canDelete ? "rounded-l-full pl-3 pr-1.5" : "rounded-full px-3",
+                    selected
+                      ? "border-transparent font-medium"
+                      : "border-border bg-background text-muted-foreground",
+                    canDelete && selected ? "border-r-0" : "",
+                    canDelete && !selected ? "border-r-0" : ""
+                  )}
+                  style={
+                    selected
+                      ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
+                      : undefined
+                  }
+                >
+                  <div
+                    className="h-2.5 w-2.5 rounded-full shrink-0"
+                    style={{ backgroundColor: tag.color || "#6366f1" }}
+                  />
+                  {tag.name}
+                  {selected && <Check className="h-3.5 w-3.5" />}
+                </button>
+                {canDelete && (
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(tag.id, tag.name)}
+                    className={cn(
+                      "inline-flex items-center py-1.5 pr-2 pl-0.5 text-sm border border-l-0 rounded-r-full transition-colors",
+                      selected
+                        ? "border-transparent"
+                        : "border-border bg-background"
+                    )}
+                    style={
+                      selected
+                        ? { backgroundColor: `${tag.color || "#6366f1"}25` }
+                        : undefined
+                    }
+                  >
+                    <X className="h-3 w-3 text-muted-foreground" />
+                  </button>
                 )}
-                style={
-                  selected
-                    ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
-                    : undefined
-                }
-              >
-                <div
-                  className="h-2.5 w-2.5 rounded-full shrink-0"
-                  style={{ backgroundColor: tag.color || "#6366f1" }}
-                />
-                {tag.name}
-                {selected && <Check className="h-3.5 w-3.5" />}
-              </button>
+              </div>
             );
           })}
         </div>

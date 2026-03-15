@@ -4,6 +4,7 @@ import { Send, Camera, Tags, X } from "lucide-react";
 import { VoiceMenu } from "./VoiceMenu";
 import { TagCombobox, InlineTagPanel } from "@/components/TagCombobox";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 import type { AddMemoryFormReturn } from "./useAddMemoryForm";
 
 interface BottomToolbarProps {
@@ -20,13 +21,14 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
   } = form;
 
   const isMobile = useIsMobile();
+  const { canEdit } = useAuth();
   const [tagsExpanded, setTagsExpanded] = useState(false);
 
   return (
     <>
       {/* Inline tag panel for mobile */}
       {isMobile && tagsExpanded && (
-        <InlineTagPanel selectedTagIds={selectedTags} onToggleTag={toggleTag} />
+        <InlineTagPanel selectedTagIds={selectedTags} onToggleTag={toggleTag} canDelete={canEdit} />
       )}
 
       <div className="border-t px-3 py-2 flex items-center gap-2">
@@ -72,7 +74,7 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
             )}
           </Button>
         ) : (
-          <TagCombobox selectedTagIds={selectedTags} onToggleTag={toggleTag} iconOnly />
+          <TagCombobox selectedTagIds={selectedTags} onToggleTag={toggleTag} iconOnly canDelete={canEdit} />
         )}
 
         {/* Spacer */}

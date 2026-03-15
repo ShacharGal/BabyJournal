@@ -45,7 +45,7 @@ export function useUsedTags() {
 
 export function useCreateTag() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (tag: TagInsert) => {
       const { data, error } = await supabase
@@ -53,12 +53,31 @@ export function useCreateTag() {
         .insert(tag)
         .select()
         .single();
-      
+
       if (error) throw error;
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tags"] });
+    },
+  });
+}
+
+export function useDeleteTag() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (tagId: string) => {
+      const { error } = await supabase
+        .from("tags")
+        .delete()
+        .eq("id", tagId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["tags"] });
+      queryClient.invalidateQueries({ queryKey: ["used-tags"] });
     },
   });
 }
