@@ -56,7 +56,13 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
             size="icon"
             type="button"
             className="h-11 w-11 rounded-full relative"
-            onClick={() => setTagsExpanded((prev) => !prev)}
+            onClick={() => {
+              // Dismiss keyboard before expanding so viewport is at full height
+              if (document.activeElement instanceof HTMLElement) {
+                document.activeElement.blur();
+              }
+              setTagsExpanded((prev) => !prev);
+            }}
           >
             {tagsExpanded ? <X className="h-6 w-6" /> : <Tags className="h-6 w-6" />}
             {!tagsExpanded && selectedTags.length > 0 && (

@@ -148,40 +148,78 @@ export function InlineTagPanel({
   onToggleTag: (tagId: string) => void;
 }) {
   const { data: tags } = useTags();
+  const createTag = useCreateTag();
+  const [newTagName, setNewTagName] = useState("");
 
-  if (!tags?.length) return null;
+  const handleCreate = async () => {
+    const name = newTagName.trim();
+    if (!name) return;
+    const exists = tags?.some((t) => t.name.toLowerCase() === name.toLowerCase());
+    if (exists) return;
+    try {
+      const newTag = await createTag.mutateAsync({ name });
+      onToggleTag(newTag.id);
+      setNewTagName("");
+    } catch {
+      // tag might already exist
+    }
+  };
 
   return (
-    <div className="border-t px-3 py-2 max-h-[150px] overflow-y-auto">
-      <div className="flex flex-wrap gap-1.5">
-        {tags.map((tag) => {
-          const selected = selectedTagIds.includes(tag.id);
-          return (
-            <button
-              key={tag.id}
-              type="button"
-              onClick={() => onToggleTag(tag.id)}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors",
-                selected
-                  ? "border-transparent font-medium"
-                  : "border-border bg-background text-muted-foreground"
-              )}
-              style={
-                selected
-                  ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
-                  : undefined
-              }
-            >
-              <div
-                className="h-2.5 w-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: tag.color || "#6366f1" }}
-              />
-              {tag.name}
-              {selected && <Check className="h-3.5 w-3.5" />}
-            </button>
-          );
-        })}
+    <div className="border-t px-3 py-2 max-h-[180px] overflow-y-auto">
+      {/* Existing tags */}
+      {tags && tags.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {tags.map((tag) => {
+            const selected = selectedTagIds.includes(tag.id);
+            return (
+              <button
+                key={tag.id}
+                type="button"
+                onClick={() => onToggleTag(tag.id)}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors",
+                  selected
+                    ? "border-transparent font-medium"
+                    : "border-border bg-background text-muted-foreground"
+                )}
+                style={
+                  selected
+                    ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
+                    : undefined
+                }
+              >
+                <div
+                  className="h-2.5 w-2.5 rounded-full shrink-0"
+                  style={{ backgroundColor: tag.color || "#6366f1" }}
+                />
+                {tag.name}
+                {selected && <Check className="h-3.5 w-3.5" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create new tag */}
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          placeholder="New tag name..."
+          value={newTagName}
+          onChange={(e) => setNewTagName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleCreate(); } }}
+          className="flex-1 h-8 px-2 text-sm border rounded-md bg-background"
+        />
+        <button
+          type="button"
+          onClick={handleCreate}
+          disabled={!newTagName.trim() || createTag.isPending}
+          className="inline-flex items-center gap-1 h-8 px-3 text-sm rounded-md bg-primary text-primary-foreground disabled:opacity-50"
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Add
+        </button>
       </div>
     </div>
   );
