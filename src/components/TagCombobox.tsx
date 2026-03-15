@@ -67,14 +67,14 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
             </Button>
           )}
         </PopoverTrigger>
-        <PopoverContent className="w-56 p-0" align="start">
+        <PopoverContent className="w-56 p-0" align="start" side="top">
           <Command>
             <CommandInput
               placeholder="Search or create tag..."
               value={inputValue}
               onValueChange={setInputValue}
             />
-            <CommandList>
+            <CommandList className="max-h-[200px]">
               <CommandEmpty className="py-2 px-3 text-sm text-muted-foreground">
                 No tags found
               </CommandEmpty>
