@@ -138,3 +138,51 @@ export function TagCombobox({ selectedTagIds, onToggleTag, iconOnly }: TagCombob
     </div>
   );
 }
+
+/** Inline tag panel for mobile — renders within the form flow, no popover/keyboard */
+export function InlineTagPanel({
+  selectedTagIds,
+  onToggleTag,
+}: {
+  selectedTagIds: string[];
+  onToggleTag: (tagId: string) => void;
+}) {
+  const { data: tags } = useTags();
+
+  if (!tags?.length) return null;
+
+  return (
+    <div className="border-t px-3 py-2 max-h-[150px] overflow-y-auto">
+      <div className="flex flex-wrap gap-1.5">
+        {tags.map((tag) => {
+          const selected = selectedTagIds.includes(tag.id);
+          return (
+            <button
+              key={tag.id}
+              type="button"
+              onClick={() => onToggleTag(tag.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm border transition-colors",
+                selected
+                  ? "border-transparent font-medium"
+                  : "border-border bg-background text-muted-foreground"
+              )}
+              style={
+                selected
+                  ? { backgroundColor: `${tag.color || "#6366f1"}25`, color: tag.color || "#6366f1" }
+                  : undefined
+              }
+            >
+              <div
+                className="h-2.5 w-2.5 rounded-full shrink-0"
+                style={{ backgroundColor: tag.color || "#6366f1" }}
+              />
+              {tag.name}
+              {selected && <Check className="h-3.5 w-3.5" />}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
