@@ -4,7 +4,7 @@ import "./index.css";
 import { registerServiceWorker } from "@/lib/pushNotifications";
 
 export const APP_VERSION = 74;
-console.log("[BabyJournal] Build v74");
+console.log("[BabyJournal] Build v75");
 
 // Register service worker for push notifications
 registerServiceWorker();
