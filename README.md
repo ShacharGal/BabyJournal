@@ -60,3 +60,22 @@ That's it. You'll have a private app at `https://your-baby-journal.vercel.app` t
 - Photos and videos live in your own Google Drive (15 GB free)
 - Everything else runs on Supabase's free tier
 - Nothing is shared with third parties — you own all of it
+
+## Troubleshooting: Google Drive Disconnects After 7 Days
+
+By default, Google Cloud projects are in **"Testing"** mode, which causes OAuth refresh tokens to **expire after 7 days**. When this happens, videos stop playing and some thumbnails break with the error: `Failed to refresh token: invalid_grant`.
+
+**To fix this permanently:**
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/) → **APIs & Services** → **OAuth consent screen**
+2. Find **"Publishing status"** — if it says "Testing", click **"Publish App"**
+3. Confirm the prompt — status should change to **"In production"**
+4. You do NOT need to complete Google's verification process. The only side-effect is that users see a "Google hasn't verified this app" warning during OAuth sign-in — just click "Advanced" → "Go to [app] (unsafe)" to continue.
+
+**To reconnect after token expiry:**
+
+1. Go to app settings and **disconnect** Google Drive
+2. **Reconnect** Google Drive (go through the OAuth flow again)
+3. If you see the "unverified app" warning, click **Advanced** → **"Go to [app] (unsafe)"**
+
+After reconnecting with the project in "Production" mode, the refresh token will not expire.
