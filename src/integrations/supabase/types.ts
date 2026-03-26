@@ -120,6 +120,7 @@ export type Database = {
           file_name: string | null
           file_size: number | null
           id: string
+          is_private: boolean
           mime_type: string | null
           post_type: string
           thumbnail_url: string | null
@@ -142,6 +143,7 @@ export type Database = {
           file_name?: string | null
           file_size?: number | null
           id?: string
+          is_private?: boolean
           mime_type?: string | null
           post_type?: string
           thumbnail_url?: string | null
@@ -164,6 +166,7 @@ export type Database = {
           file_name?: string | null
           file_size?: number | null
           id?: string
+          is_private?: boolean
           mime_type?: string | null
           post_type?: string
           thumbnail_url?: string | null

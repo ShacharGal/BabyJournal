@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { formatAgeAtDate } from "@/lib/ageFormatter";
 import {
-  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User, Star,
+  Loader2, Heart, Calendar, Volume2, ChevronLeft, ChevronRight, User, Star, Lock,
 } from "lucide-react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import type { Filters } from "@/components/SearchFilters";
@@ -77,6 +77,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
   const allEntries = data?.pages.flat() ?? [];
 
   const filteredEntries = allEntries.filter((entry) => {
+    if (entry.is_private && user?.permission !== "full") return false;
     if (filters.text) {
       const s = filters.text.toLowerCase();
       const matchesText =
@@ -442,6 +443,7 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
       {/* Header (LTR): Date left, Name + Age right */}
       <div className="flex items-center justify-between px-6 pt-5 pb-1">
         <span className="text-[11px] font-medium text-stone-400 flex items-center gap-1">
+          {entry.is_private && <Lock className="h-3 w-3 text-stone-400" />}
           {isMilestone && <Star className="h-3 w-3 fill-[#e8a030] text-[#e8a030]" />}
           {format(new Date(entry.date), "MMM d, yyyy")}
         </span>

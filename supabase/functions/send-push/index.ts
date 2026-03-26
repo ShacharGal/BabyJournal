@@ -21,8 +21,8 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
-    const { babyName, description, postedByUserId, postedByNickname } = await req.json();
-    console.log(`[SendPush] New post by ${postedByNickname} about ${babyName}`);
+    const { babyName, description, postedByUserId, postedByNickname, isPrivate } = await req.json();
+    console.log(`[SendPush] New post by ${postedByNickname} about ${babyName}${isPrivate ? " (private)" : ""}`);
 
     const vapidPublicKey = Deno.env.get("VAPID_PUBLIC_KEY");
     const vapidPrivateKey = Deno.env.get("VAPID_PRIVATE_KEY");
@@ -36,11 +36,18 @@ Deno.serve(async (req) => {
     webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
 
     // Get all users except the poster
-    const { data: users, error: usersErr } = await supabase
+    let usersQuery = supabase
       .from("app_users")
-      .select("id, nickname, notification_pref")
+      .select("id, nickname, notification_pref, permission")
       .neq("id", postedByUserId)
       .neq("notification_pref", "none");
+
+    // Private entries: only notify full-permission users
+    if (isPrivate) {
+      usersQuery = usersQuery.eq("permission", "full");
+    }
+
+    const { data: users, error: usersErr } = await usersQuery;
 
     if (usersErr) throw usersErr;
     if (!users || users.length === 0) {

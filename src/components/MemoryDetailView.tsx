@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight, Star } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight, Star, Lock } from "lucide-react";
 import { format } from "date-fns";
 import { formatAgeAtDate } from "@/lib/ageFormatter";
 import { parseDialogueText } from "@/lib/dialogueParser";
@@ -198,6 +198,7 @@ export function MemoryDetailView({
           {/* Header metadata (LTR) */}
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-stone-400 flex items-center gap-1">
+              {entry.is_private && <Lock className="h-3.5 w-3.5 text-stone-400" />}
               {isMilestone && <Star className="h-3.5 w-3.5 fill-[#e8a030] text-[#e8a030]" />}
               {format(new Date(entry.date), "MMM d, yyyy")}
             </span>

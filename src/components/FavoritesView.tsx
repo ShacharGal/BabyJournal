@@ -48,7 +48,7 @@ export function FavoritesView({ onClose }: FavoritesViewProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            {entries.map((entry) => (
+            {entries.filter((e) => !e.is_private || user?.permission === "full").map((entry) => (
               <MemoryCard
                 key={entry.id}
                 entry={entry}

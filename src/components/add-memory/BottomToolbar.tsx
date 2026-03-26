@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Send, Camera, Tags, X } from "lucide-react";
+import { Send, Camera, Tags, X, Lock, LockOpen } from "lucide-react";
 import { VoiceMenu } from "./VoiceMenu";
 import { TagCombobox, InlineTagPanel } from "@/components/TagCombobox";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -15,6 +15,7 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
   const {
     isEditing, isUploading, babies, recorder,
     selectedTags, toggleTag,
+    isPrivate, setIsPrivate,
     cameraInputRef, audioInputRef,
     handleCameraFilesChange, handleAudioChange,
     hasAnyAudio,
@@ -75,6 +76,19 @@ export function BottomToolbar({ form }: BottomToolbarProps) {
           </Button>
         ) : (
           <TagCombobox selectedTagIds={selectedTags} onToggleTag={toggleTag} iconOnly canDelete={canEdit} />
+        )}
+
+        {/* Private toggle — only for full-permission users */}
+        {canEdit && (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={`h-11 w-11 rounded-full ${isPrivate ? "bg-stone-100 border-stone-300" : ""}`}
+            onClick={() => setIsPrivate(!isPrivate)}
+          >
+            {isPrivate ? <Lock className="h-5 w-5 text-stone-600" /> : <LockOpen className="h-5 w-5 text-stone-400" />}
+          </Button>
         )}
 
         {/* Spacer */}

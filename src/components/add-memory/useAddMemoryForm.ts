@@ -40,6 +40,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [postType, setPostType] = useState<"standard" | "dialogue" | "milestone">("standard");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [secondaryFiles, setSecondaryFiles] = useState<File[]>([]);
@@ -75,6 +76,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
       setDescription(editEntry.description || "");
       setDate(editEntry.date);
       setPostType((editEntry.post_type as "standard" | "dialogue" | "milestone") || "standard");
+      setIsPrivate(!!editEntry.is_private);
       setSelectedTags(editEntry.entry_tags.map((et) => et.tag_id));
       setFile(null);
       setSecondaryFiles([]);
@@ -109,6 +111,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
     setAudioFile(null);
     setSelectedTags([]);
     setPostType("standard");
+    setIsPrivate(false);
     setRemoveExistingFile(false);
     setRemoveExistingAudio(false);
     setUploadStatus("");
@@ -284,6 +287,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
       description: description.trim() || null,
       date,
       postType,
+      isPrivate,
       tags: [...selectedTags],
       file,
       effectiveAudio,
@@ -326,6 +330,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
     description: string | null;
     date: string;
     postType: string;
+    isPrivate: boolean;
     tags: string[];
     file: File | null;
     effectiveAudio: File | null;
@@ -347,6 +352,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
         file_size: formData.file?.size,
         mime_type: formData.file?.type,
         created_by: user?.id,
+        is_private: formData.isPrivate,
         app_version: APP_VERSION,
       },
       tagIds: formData.tags,
@@ -361,6 +367,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
         description: formData.description,
         postedByUserId: user?.id,
         postedByNickname: user?.nickname,
+        isPrivate: formData.isPrivate,
       },
     }).catch((err) => console.error("[SendPush] Failed:", err));
 
@@ -407,6 +414,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
     description: string | null;
     date: string;
     postType: string;
+    isPrivate: boolean;
     tags: string[];
     file: File | null;
     effectiveAudio: File | null;
@@ -424,6 +432,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
       description: formData.description,
       date: formData.date,
       post_type: formData.postType,
+      is_private: formData.isPrivate,
       app_version: APP_VERSION,
     };
 
@@ -503,6 +512,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
     description, setDescription,
     date, setDate,
     postType, setPostType,
+    isPrivate, setIsPrivate,
     selectedTags, toggleTag,
     file, secondaryFiles, audioFile,
     removeExistingFile, removeExistingAudio, removeSecondaryIds,
