@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useVisualViewport } from "@/hooks/useVisualViewport";
@@ -41,6 +42,7 @@ interface AddMemoryDialogProps {
 function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> }) {
   const {
     babies, selectedBabyId, setSelectedBabyId,
+    title, setTitle,
     date, setDate,
     postType, setPostType,
     description, setDescription,
@@ -154,6 +156,17 @@ function AddMemoryContent({ form }: { form: ReturnType<typeof useAddMemoryForm> 
             <SelectItem value="milestone">Milestone</SelectItem>
           </SelectContent>
         </Select>
+      </div>
+
+      {/* Optional title */}
+      <div className="px-4 pb-1">
+        <Input
+          dir="auto"
+          placeholder="Title (optional)"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          className="h-9 text-sm font-semibold border bg-accent/30 rounded-lg focus-visible:ring-1"
+        />
       </div>
 
       {/* Hero textarea with @mention autocomplete */}

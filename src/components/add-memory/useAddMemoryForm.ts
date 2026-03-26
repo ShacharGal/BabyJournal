@@ -37,6 +37,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   const audioInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedBabyId, setSelectedBabyId] = useState<string>("");
+  const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [postType, setPostType] = useState<"standard" | "dialogue" | "milestone">("standard");
@@ -73,6 +74,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
     if (editEntry) {
       setSelectedBabyId(editEntry.baby_id);
+      setTitle(editEntry.title || "");
       setDescription(editEntry.description || "");
       setDate(editEntry.date);
       setPostType((editEntry.post_type as "standard" | "dialogue" | "milestone") || "standard");
@@ -104,6 +106,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   }, [open, editEntry, preSelectedBabyId, babies, initialFiles]);
 
   const resetForm = () => {
+    setTitle("");
     setDescription("");
     setFile(null);
     setSecondaryFiles([]);
@@ -284,6 +287,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
     const formData = {
       babyId: selectedBabyId,
+      title: title.trim() || null,
       description: description.trim() || null,
       date,
       postType,
@@ -327,6 +331,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
   const handleCreateSubmit = async (formData: {
     babyId: string;
+    title: string | null;
     description: string | null;
     date: string;
     postType: string;
@@ -346,6 +351,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
         baby_id: formData.babyId,
         type: entryType,
         post_type: formData.postType,
+        title: formData.title,
         description: formData.description,
         date: formData.date,
         file_name: formData.file?.name,
@@ -411,6 +417,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
 
   const handleEditSubmit = async (formData: {
     babyId: string;
+    title: string | null;
     description: string | null;
     date: string;
     postType: string;
@@ -429,6 +436,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
     setUploadStatus("Updating entry...");
     const entryUpdate: Record<string, any> = {
       baby_id: formData.babyId,
+      title: formData.title,
       description: formData.description,
       date: formData.date,
       post_type: formData.postType,
@@ -509,6 +517,7 @@ export function useAddMemoryForm({ open, onOpenChange, preSelectedBabyId, editEn
   return {
     // State
     selectedBabyId, setSelectedBabyId,
+    title, setTitle,
     description, setDescription,
     date, setDate,
     postType, setPostType,

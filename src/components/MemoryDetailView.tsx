@@ -212,6 +212,11 @@ export function MemoryDetailView({
             </div>
           </div>
 
+          {/* Title */}
+          {entry.title && (
+            <h2 dir="auto" className="text-xl font-bold text-zinc-800">{entry.title}</h2>
+          )}
+
           {/* Full text (auto-direction) */}
           {entry.description && (
             <div

@@ -81,6 +81,7 @@ export function MemoryFeed({ babyId, filters, onEditEntry }: MemoryFeedProps) {
     if (filters.text) {
       const s = filters.text.toLowerCase();
       const matchesText =
+        entry.title?.toLowerCase().includes(s) ||
         entry.description?.toLowerCase().includes(s) ||
         entry.entry_tags.some((et) => et.tags.name.toLowerCase().includes(s)) ||
         entry.created_by_nickname?.toLowerCase().includes(s);
@@ -503,15 +504,18 @@ export function MemoryCard({ entry, babyName, babyDob, showBaby, onExpand, isFav
         <div
           className={`${showSplit ? "flex-1 min-w-0" : "w-full"}`}
         >
+          {entry.title && (
+            <p dir="auto" className="text-[15px] font-semibold text-zinc-800 mb-1 line-clamp-2">{entry.title}</p>
+          )}
           {entry.description ? (
             <TruncatedText
               isDialogue={isDialogue}
               description={entry.description}
               nicknames={nicknames}
             />
-          ) : (
+          ) : !entry.title ? (
             <div className="text-sm text-[#57534e]">No description</div>
-          )}
+          ) : null}
         </div>
       </div>
 

@@ -124,6 +124,7 @@ export type Database = {
           mime_type: string | null
           post_type: string
           thumbnail_url: string | null
+          title: string | null
           type: string
           updated_at: string
         }
@@ -147,6 +148,7 @@ export type Database = {
           mime_type?: string | null
           post_type?: string
           thumbnail_url?: string | null
+          title?: string | null
           type: string
           updated_at?: string
         }
@@ -170,6 +172,7 @@ export type Database = {
           mime_type?: string | null
           post_type?: string
           thumbnail_url?: string | null
+          title?: string | null
           type?: string
           updated_at?: string
         }
