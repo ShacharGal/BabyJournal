@@ -1,17 +1,16 @@
 const SUPABASE_URL = "https://mcbhiwqtzdjkwqbljjdq.supabase.co";
 const APP_URL = "https://baby-journal-sepia.vercel.app";
 
-function escHtml(s: string): string {
-  return s
+function escHtml(s) {
+  return String(s)
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export default async function handler(req: any, res: any) {
-  const id: string = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id ?? "";
+export default async function handler(req, res) {
+  const id = Array.isArray(req.query.id) ? req.query.id[0] : (req.query.id ?? "");
 
   let title = "Baby Journal";
   let description = "A precious memory";
