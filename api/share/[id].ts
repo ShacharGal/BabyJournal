@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const SUPABASE_URL = "https://mcbhiwqtzdjkwqbljjdq.supabase.co";
-const APP_URL = "https://babyjournal.vercel.app";
+const APP_URL = "https://baby-journal-sepia.vercel.app";
 
 function escHtml(s: string): string {
   return s
