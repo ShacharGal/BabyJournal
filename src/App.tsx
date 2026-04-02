@@ -2,17 +2,19 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuthContext } from "@/contexts/AuthContext";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
 import ShareTarget from "./pages/ShareTarget";
+import EntryPage from "./pages/EntryPage";
 
 const queryClient = new QueryClient();
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthContext();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -23,7 +25,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    const redirect = encodeURIComponent(location.pathname);
+    return <Navigate to={`/login?redirect=${redirect}`} replace />;
   }
 
   return <>{children}</>;
@@ -71,6 +74,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ShareTarget />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/entry/:id"
+        element={
+          <ProtectedRoute>
+            <EntryPage />
           </ProtectedRoute>
         }
       />

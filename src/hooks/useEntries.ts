@@ -220,6 +220,32 @@ export function useDeleteEntry() {
   });
 }
 
+export function useEntryById(id: string) {
+  return useQuery({
+    queryKey: ["entry", id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("entries")
+        .select(`*, entry_tags(tag_id, tags(*)), entry_images(*)`)
+        .eq("id", id)
+        .single();
+      if (error) throw error;
+
+      const row = data as EntryWithTags;
+      if (row.created_by) {
+        const { data: creators } = await supabase
+          .from("app_users_public" as any)
+          .select("id, nickname")
+          .in("id", [row.created_by]);
+        const creator = ((creators ?? []) as { id: string; nickname: string }[])[0];
+        (row as EntryWithTags).created_by_nickname = creator?.nickname ?? null;
+      }
+      return row;
+    },
+    enabled: !!id,
+  });
+}
+
 export function useAllNicknames() {
   return useQuery({
     queryKey: ["all-nicknames"],

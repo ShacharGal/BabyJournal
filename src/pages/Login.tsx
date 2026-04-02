@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,8 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuthContext();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,6 +30,10 @@ export default function Login() {
     if (!result.success) {
       setError(result.error || "Invalid password");
       setPassword("");
+    } else {
+      const params = new URLSearchParams(location.search);
+      const redirect = params.get("redirect") || "/";
+      navigate(redirect, { replace: true });
     }
   };
 
