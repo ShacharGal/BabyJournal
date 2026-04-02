@@ -1,5 +1,3 @@
-import type { VercelRequest, VercelResponse } from "@vercel/node";
-
 const SUPABASE_URL = "https://mcbhiwqtzdjkwqbljjdq.supabase.co";
 const APP_URL = "https://baby-journal-sepia.vercel.app";
 
@@ -11,8 +9,9 @@ function escHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const id = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export default async function handler(req: any, res: any) {
+  const id: string = Array.isArray(req.query.id) ? req.query.id[0] : req.query.id ?? "";
 
   let title = "Baby Journal";
   let description = "A precious memory";
@@ -20,7 +19,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const resp = await fetch(
-      `${SUPABASE_URL}/functions/v1/entry-meta?id=${encodeURIComponent(id ?? "")}`
+      `${SUPABASE_URL}/functions/v1/entry-meta?id=${encodeURIComponent(id)}`
     );
     if (resp.ok) {
       const meta = await resp.json();
