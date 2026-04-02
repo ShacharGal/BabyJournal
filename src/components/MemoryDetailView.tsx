@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight, Star, Lock } from "lucide-react";
+import { X, Pencil, Trash2, Loader2, Mic, Heart, ChevronLeft, ChevronRight, Star, Lock, Share2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { formatAgeAtDate } from "@/lib/ageFormatter";
 import { parseDialogueText } from "@/lib/dialogueParser";
@@ -39,6 +40,7 @@ export function MemoryDetailView({
   onNavigate,
   nicknames = [],
 }: MemoryDetailViewProps) {
+  const { toast } = useToast();
   const audioUrl = entry.audio_url;
   const hasThumbnail = !!entry.thumbnail_url;
   const isPhoto = entry.type === "photo";
@@ -132,6 +134,22 @@ export function MemoryDetailView({
     return () => { document.body.style.overflow = ""; };
   }, []);
 
+  const handleShare = useCallback(async () => {
+    const shareUrl = `${window.location.origin}/share/${entry.id}`;
+    const title = entry.title || format(new Date(entry.date), "MMMM d, yyyy");
+    console.log("[Share] Sharing entry", entry.id, shareUrl);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title, url: shareUrl });
+      } catch (_) {
+        // user cancelled or not supported — fall through
+      }
+    } else {
+      await navigator.clipboard.writeText(shareUrl);
+      toast({ description: "Link copied!" });
+    }
+  }, [entry.id, entry.title, entry.date, toast]);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/10 backdrop-blur-[15px] overflow-y-auto"
@@ -145,6 +163,9 @@ export function MemoryDetailView({
           <X className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={handleShare} title="Share">
+            <Share2 className="h-4 w-4" />
+          </Button>
           {onToggleFavorite && (
             <Button
               variant="ghost"
